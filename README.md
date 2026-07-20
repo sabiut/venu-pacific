@@ -1,10 +1,9 @@
 # Pacific Linux
 
 A Debian-based desktop Linux distribution built for the Pacific Islands as a
-region — Melanesia, Polynesia, and Micronesia — not one country. Designed
-around the region's real conditions: expensive/unreliable bandwidth, aging
-donated hardware, many languages, and routine cyclone/tsunami/earthquake
-exposure.
+region — not one country. Designed around the region's real conditions:
+expensive/unreliable bandwidth, aging donated hardware, many languages, and
+routine cyclone/tsunami/earthquake exposure.
 
 ## Base
 
