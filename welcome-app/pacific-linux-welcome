@@ -2,13 +2,16 @@
 """Pacific Linux first-run welcome app.
 
 Shows once per user (guarded by a marker file, same pattern as
-pacific-linux-set-defaults) via an XDG autostart entry. Deliberately
-simple for Phase 1: v1 only ships English, so the language section is
-honest about that rather than pretending to offer languages that don't
-exist yet — Bislama is shown but disabled, not hidden, so people know
-it's coming rather than assuming it was never planned.
+pacific-linux-set-defaults) via an XDG autostart entry. Strings are
+gettext-wrapped and the catalogs live under locales/<lang>/pacific-linux.po,
+but v1 only ships a real English catalog — the language section is honest
+about that rather than pretending to offer languages that don't exist yet.
+Bislama is shown but disabled, not hidden, so people know it's coming
+rather than assuming it was never planned; it stays disabled until its
+catalog has real, reviewed translations rather than an empty scaffold.
 """
 
+import gettext
 import os
 
 import gi
@@ -19,6 +22,13 @@ from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402
 
 MARKER = os.path.expanduser("~/.config/pacific-linux/.welcome-shown")
 LOGO_PATH = "/usr/share/pixmaps/pacific-linux.png"
+
+# Catalogs are compiled into /usr/share/locale by
+# 0140-pacific-linux-locales.hook.chroot from locales/<lang>/pacific-linux.po.
+# Picks up the running desktop session's LANGUAGE/LC_ALL/LANG automatically.
+gettext.bindtextdomain("pacific-linux", "/usr/share/locale")
+gettext.textdomain("pacific-linux")
+_ = gettext.gettext
 
 CSS = b"""
 window { background-color: #16232b; }
@@ -42,22 +52,26 @@ button.get-started {
 button.get-started:hover { background-color: #4fb6ad; }
 """
 
-HIGHLIGHTS = [
-    ("Firefox", "Web browsing"),
-    ("LibreOffice", "Documents, spreadsheets, presentations"),
-    ("GIMP", "Image editing"),
-    (
-        "Kiwix",
-        "Offline Wikipedia and Pacific health/agriculture/disaster info "
-        "— works with no internet connection",
-    ),
-    ("Synaptic", "Install or remove software"),
-]
+
+def _highlights():
+    return [
+        ("Firefox", _("Web browsing")),
+        ("LibreOffice", _("Documents, spreadsheets, presentations")),
+        ("GIMP", _("Image editing")),
+        (
+            "Kiwix",
+            _(
+                "Offline Wikipedia and Pacific health/agriculture/disaster info "
+                "— works with no internet connection"
+            ),
+        ),
+        ("Synaptic", _("Install or remove software")),
+    ]
 
 
 class WelcomeWindow(Gtk.Window):
     def __init__(self):
-        super().__init__(title="Welcome to Pacific Linux")
+        super().__init__(title=_("Welcome to Pacific Linux"))
         self.set_default_size(560, 560)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_resizable(False)
@@ -89,7 +103,7 @@ class WelcomeWindow(Gtk.Window):
         eyebrow.get_style_context().add_class("eyebrow")
         header.pack_start(eyebrow, False, False, 0)
 
-        title = Gtk.Label(label="Welcome", xalign=0.5)
+        title = Gtk.Label(label=_("Welcome"), xalign=0.5)
         title.get_style_context().add_class("title")
         header.pack_start(title, False, False, 0)
 
@@ -100,7 +114,7 @@ class WelcomeWindow(Gtk.Window):
         body.set_border_width(28)
 
         intro = Gtk.Label(
-            label=(
+            label=_(
                 "A Debian-based desktop built for the Pacific Islands region — "
                 "designed for real conditions here: limited bandwidth, older "
                 "hardware, and routine cyclone/tsunami/earthquake exposure."
@@ -119,17 +133,17 @@ class WelcomeWindow(Gtk.Window):
     def _build_language_section(self):
         section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
 
-        section_title = Gtk.Label(label="Language", xalign=0)
+        section_title = Gtk.Label(label=_("Language"), xalign=0)
         section_title.get_style_context().add_class("section-title")
         section.pack_start(section_title, False, False, 0)
 
-        english = Gtk.RadioButton.new_with_label(None, "English")
+        english = Gtk.RadioButton.new_with_label(None, _("English"))
         english.set_active(True)
         section.pack_start(english, False, False, 0)
 
         bislama = Gtk.RadioButton.new_with_label_from_widget(
             english,
-            "Bislama — translation in progress, coming in a future update",
+            _("Bislama — translation in progress, coming in a future update"),
         )
         bislama.set_sensitive(False)
         bislama.get_style_context().add_class("coming-soon")
@@ -140,11 +154,11 @@ class WelcomeWindow(Gtk.Window):
     def _build_highlights_section(self):
         section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
 
-        section_title = Gtk.Label(label="What's included", xalign=0)
+        section_title = Gtk.Label(label=_("What's included"), xalign=0)
         section_title.get_style_context().add_class("section-title")
         section.pack_start(section_title, False, False, 0)
 
-        for name, desc in HIGHLIGHTS:
+        for name, desc in _highlights():
             row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
 
             name_label = Gtk.Label(label=f"{name}:", xalign=0)
@@ -165,7 +179,7 @@ class WelcomeWindow(Gtk.Window):
         footer.set_border_width(20)
         footer.set_halign(Gtk.Align.END)
 
-        get_started = Gtk.Button(label="Get Started")
+        get_started = Gtk.Button(label=_("Get Started"))
         get_started.get_style_context().add_class("get-started")
         get_started.connect("clicked", self.on_dismiss)
         footer.pack_start(get_started, False, False, 0)

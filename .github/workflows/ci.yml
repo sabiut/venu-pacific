@@ -13,8 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure systemd-analyze is available
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends systemd
+      - name: Ensure systemd-analyze and msgfmt are available
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends systemd gettext
 
       - name: Run lint checks
         run: ./scripts/lint.sh
@@ -40,6 +40,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends live-build ca-certificates file
+
+      - name: Sync translation catalogs into includes.chroot
+        run: ./scripts/sync-locales.sh
 
       - name: lb config
         working-directory: config

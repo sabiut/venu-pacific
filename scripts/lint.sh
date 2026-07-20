@@ -91,6 +91,13 @@ while IFS= read -r -d '' f; do
     fi
 done < <(find config/config/includes.chroot -name "*.xml" -print0 2>/dev/null)
 
+echo "== gettext catalogs (locales/) =="
+while IFS= read -r -d '' f; do
+    if ! msgfmt --check -o /dev/null "$f" 2>&1; then
+        echo "FAIL: $f failed msgfmt --check" | tee -a "$FAIL_LOG"
+    fi
+done < <(find locales -type f \( -name "*.po" -o -name "*.pot" \) -print0 2>/dev/null)
+
 echo
 if [ -s "$FAIL_LOG" ]; then
     echo "Lint failed."

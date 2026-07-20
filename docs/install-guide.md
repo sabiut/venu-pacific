@@ -13,6 +13,7 @@
 Either download a released ISO, or build one yourself from source:
 
 ```sh
+./scripts/sync-locales.sh
 cd config
 lb config \
   --distribution trixie \

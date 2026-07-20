@@ -9,9 +9,8 @@ We are **not** trying to support every Pacific language and country at once
 — that's the most common way projects like this stall. v1 ships English +
 Bislama. Everything is built so adding a language or country later is a
 translation/content task, not an engineering one. If you want to bring your
-own language or country in, the localization framework (once it lands in
-Phase 2) is the place to do it — please don't ask for special-casing in the
-core build.
+own language or country in, the localization framework in `locales/` is the
+place to do it — please don't ask for special-casing in the core build.
 
 ## What we're looking for right now (Phase 0/1)
 
@@ -23,11 +22,24 @@ core build.
 
 ## Translations
 
-Once `locales/` has a `.pot` template (Phase 2), translating is:
+`locales/pacific-linux.pot` is the template, extracted from the welcome
+app's source strings. `locales/bi/pacific-linux.po` already exists as a
+scaffold — every string is there, but every `msgstr` is intentionally
+empty, since a guessed machine translation shown to real users is worse
+than admitting Bislama isn't ready yet. To help:
 
-1. Copy the template into `locales/<lang-code>/`
-2. Translate the strings
-3. Open a PR — a native speaker review is required before merge
+1. If your language doesn't have a catalog yet, run
+   `msginit --input=locales/pacific-linux.pot --locale=<lang-code> --output=locales/<lang-code>/pacific-linux.po`
+2. Fill in the `msgstr` lines (a `.po` file is plain text — any text editor
+   or a tool like [Poedit](https://poedit.net/) works)
+3. Open a PR — a native or fluent speaker review is required before merge.
+   The app only enables a language once its catalog is reviewed, not just
+   present.
+
+If the source strings change, `scripts/update-pot.sh` regenerates the
+template and merges the changes into every existing catalog without
+touching translations already done (needs the `gettext` package for
+`xgettext`/`msgmerge`).
 
 ## Code changes
 

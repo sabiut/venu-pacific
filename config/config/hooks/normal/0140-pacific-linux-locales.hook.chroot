@@ -1,0 +1,21 @@
+#!/bin/sh
+# Compiles the .po catalogs staged by scripts/sync-locales.sh into the
+# gettext binary format under /usr/share/locale, then removes the source
+# staging directory — only the compiled .mo needs to ship.
+set -e
+
+SRC_ROOT="/usr/share/pacific-linux/locales"
+
+if [ -d "$SRC_ROOT" ]; then
+    apt-get install -y --no-install-recommends gettext
+
+    for po in "$SRC_ROOT"/*/pacific-linux.po; do
+        [ -f "$po" ] || continue
+        lang="$(basename "$(dirname "$po")")"
+        dest_dir="/usr/share/locale/$lang/LC_MESSAGES"
+        mkdir -p "$dest_dir"
+        msgfmt "$po" -o "$dest_dir/pacific-linux.mo"
+    done
+
+    rm -rf "$SRC_ROOT"
+fi

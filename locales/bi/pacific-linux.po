@@ -1,0 +1,81 @@
+# Bislama translation for Pacific Linux welcome app.
+# Copyright (C) 2026 Pacific Linux contributors
+# This file is distributed under the same license as the pacific-linux package.
+#
+# STATUS: scaffold only — msgids are extracted and ready, but msgstrs below
+# are intentionally left untranslated. The welcome app keeps the Bislama
+# option disabled (see welcome-app/pacific-linux-welcome) until a fluent
+# speaker has filled these in and they've been reviewed; shipping a
+# guessed/machine translation for real users is worse than admitting it
+# isn't ready yet. If you can help translate, open a PR filling in the
+# msgstr lines — see CONTRIBUTING.md.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: pacific-linux\n"
+"Report-Msgid-Bugs-To: https://github.com/sabiut/pacific-linux/issues\n"
+"POT-Creation-Date: 2026-07-21 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Bislama <LL@li.org>\n"
+"Language: bi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: welcome-app/pacific-linux-welcome:74
+msgid "Welcome to Pacific Linux"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:106
+msgid "Welcome"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:117
+msgid ""
+"A Debian-based desktop built for the Pacific Islands region — designed for "
+"real conditions here: limited bandwidth, older hardware, and routine "
+"cyclone/tsunami/earthquake exposure."
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:136
+msgid "Language"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:140
+msgid "English"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:146
+msgid "Bislama — translation in progress, coming in a future update"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:157
+msgid "What's included"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:58
+msgid "Web browsing"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:59
+msgid "Documents, spreadsheets, presentations"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:60
+msgid "Image editing"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:63
+msgid ""
+"Offline Wikipedia and Pacific health/agriculture/disaster info — works "
+"with no internet connection"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:68
+msgid "Install or remove software"
+msgstr ""
+
+#: welcome-app/pacific-linux-welcome:182
+msgid "Get Started"
+msgstr ""
