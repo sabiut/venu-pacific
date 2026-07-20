@@ -1,26 +1,42 @@
 #!/bin/sh
 # Applies Pacific Linux desktop defaults on first login. Runs once per user
-# (guarded by a marker file) via an XDG autostart entry, since XFCE's
-# per-monitor xfconf property names (monitorDP-1, monitorVGA-1, ...) vary by
-# hardware and can't be hardcoded reliably at image-build time.
-
-set -e
+# (guarded by a marker file) via an XDG autostart entry, since the per-monitor
+# xfconf property namespace (monitor0, monitor1, ...) isn't known until
+# xfdesktop has actually started and created it — can't hardcode at
+# image-build time.
+#
+# KNOWN ISSUE: even with image-path/last-image/image-show all verified
+# correct in xfconf, xfdesktop was not observed to visually pick up the new
+# wallpaper in VM boot testing (reload and full xfdesktop restart both
+# tried). The property writes are confirmed correct; something downstream in
+# xfdesktop's rendering is not refreshing. Needs verification on real
+# hardware / a full session before trusting this to work end-to-end.
 
 MARKER="$HOME/.config/pacific-linux/.defaults-applied"
 WALLPAPER="/usr/share/backgrounds/pacific-linux/pacific-ocean.png"
 
-[ -f "$MARKER" ] && exit 0
+if [ -f "$MARKER" ]; then
+    exit 0
+fi
 
 mkdir -p "$(dirname "$MARKER")"
 
 # Wait for xfdesktop to register its channel properties before querying them.
-for _ in $(seq 1 20); do
-    xfconf-query -c xfce4-desktop -l >/dev/null 2>&1 && break
+i=0
+while [ "$i" -lt 20 ]; do
+    if xfconf-query -c xfce4-desktop -l >/dev/null 2>&1; then
+        break
+    fi
+    i=$((i + 1))
     sleep 0.5
 done
 
-xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E '/last-image$|/image-path$' | while read -r prop; do
-    xfconf-query -c xfce4-desktop -p "$prop" -s "$WALLPAPER" 2>/dev/null || true
+xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E '/image-path$' | while read -r prop; do
+    xfconf-query -c xfce4-desktop -p "$prop" -s "$WALLPAPER" 2>/dev/null
+    xfconf-query -c xfce4-desktop -p "${prop%image-path}last-image" -s "$WALLPAPER" 2>/dev/null
+    xfconf-query -c xfce4-desktop -p "${prop%image-path}image-show" -n -t bool -s true 2>/dev/null
 done
+
+xfdesktop --reload 2>/dev/null
 
 touch "$MARKER"

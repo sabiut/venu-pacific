@@ -3,6 +3,13 @@ config/chroot/
 config/binary/
 config/cache/
 config/.build/
+config/binary.modified_timestamps
+config/chroot.files
+config/chroot.packages.install
+config/chroot.packages.live
+config/live-image-*.contents
+config/live-image-*.files
+config/live-image-*.packages
 *.iso
 *.iso.zsync
 *.build.log

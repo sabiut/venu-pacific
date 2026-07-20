@@ -37,13 +37,25 @@ for the old hardware this project targets.
 - `config/config/includes.chroot/etc/xdg/autostart/pacific-linux-set-defaults.desktop`
   + `.../usr/local/bin/pacific-linux-set-defaults` — sets the default
   wallpaper on first XFCE login. Done this way (not baked into a config
-  file) because XFCE's per-monitor xfconf property names
-  (`monitorDP-1`, `monitorVGA-1`, ...) vary by hardware and can't be
-  hardcoded reliably at image-build time.
+  file) because the per-monitor xfconf property namespace isn't known until
+  xfdesktop has actually started and created it.
 
-## Not yet verified
+## Verified by actually booting the ISO (QEMU/KVM)
 
-None of this has been seen on an actual boot yet — that only happens once
-we run `lb build` and boot the resulting ISO (in a VM first). Treat the
-Plymouth theme and the first-login script as "should work per documented
-API" until that test happens.
+- **Plymouth boot theme** — confirmed working: background, centered mark,
+  progress bar all render correctly during boot.
+- **Boot menu / installer branding** — confirmed correct (Debian's isolinux
+  menu shows the right build metadata; base XFCE desktop boots fine).
+- **Desktop wallpaper — confirmed NOT working, root cause still open.** The
+  first-login script does run (marker file created at boot time) and does
+  correctly write `image-path`, `last-image`, and `image-show=true` in
+  xfconf for every monitor found (verified directly with `xfconf-query`,
+  values are exactly right). But the rendered XFCE desktop never picks up
+  the change — not via the script, not via `xfdesktop --reload`, not via
+  fully killing and restarting `xfdesktop`. The data layer is provably
+  correct; something in xfdesktop's actual repaint isn't happening in this
+  test environment (headless QEMU, std VGA, no real compositor session
+  during manual testing). Needs a check on real hardware, or someone more
+  familiar with this XFCE version's rendering internals, before trusting
+  this to work for real users. Left the script fix in (it's strictly more
+  correct than before) but do not consider this closed.
