@@ -1,0 +1,19 @@
+#!/bin/sh
+# Bundles Vikidia (a Wikipedia-style encyclopedia written for children,
+# ages 8-13) directly into the image -- unlike every other Kiwix ZIM file
+# we looked at (1.8-4.2GB+), Vikidia with images is only ~103MB, a
+# negligible size increase, so it's worth shipping with zero setup rather
+# than adding it to kiwix-content/'s download-later guide.
+#
+# Downloaded at build time rather than committed to git (a 103MB binary
+# doesn't belong in version control). If this exact dated file 404s in a
+# future rebuild, check https://library.kiwix.org for the current Vikidia
+# release and update the filename below.
+set -e
+
+DEST_DIR="/usr/share/pacific-linux/kiwix-content"
+mkdir -p "$DEST_DIR"
+
+wget -q \
+    "https://download.kiwix.org/zim/vikidia/vikidia_en_all_maxi_2026-06.zim" \
+    -O "$DEST_DIR/vikidia.zim"

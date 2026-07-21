@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Vikidia (Kids' Encyclopedia)
+GenericName=Offline encyclopedia for children
+Comment=Wikipedia-style encyclopedia written for children ages 8-13 -- works with no internet connection, no download needed
+Exec=kiwix-desktop /usr/share/pacific-linux/kiwix-content/vikidia.zim
+Icon=kiwix-desktop
+Terminal=false
+Categories=Education;
+Keywords=kiwix;vikidia;children;kids;encyclopedia;education;offline;
