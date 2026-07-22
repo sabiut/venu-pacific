@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pacific AI Assistant -- offline chat assistant (Phase 5 MVP).
+"""Venu Pacific AI Assistant -- offline chat assistant (Phase 5 MVP).
 
 Router model: Qwen3-4B via llama.cpp's llama-server, spawned on demand when
 this window opens and stopped when it closes -- RAM is only used while the
@@ -1603,7 +1603,7 @@ class PulsingLogo(Gtk.Image):
 
 class AssistantWindow(Gtk.Window):
     def __init__(self):
-        super().__init__(title=_("Pacific AI Assistant"))
+        super().__init__(title=_("Venu Pacific — AI Assistant"))
         # Wider than before to make room for the chat-history sidebar
         # alongside the chat area, not instead of it.
         self.set_default_size(880, 640)
@@ -1833,7 +1833,7 @@ class AssistantWindow(Gtk.Window):
 
         text_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
 
-        title = Gtk.Label(label=_("Pacific AI Assistant"), xalign=0)
+        title = Gtk.Label(label=_("Venu Pacific — AI Assistant"), xalign=0)
         title.get_style_context().add_class("title")
         text_col.pack_start(title, False, False, 0)
 
