@@ -31,6 +31,7 @@ import subprocess
 import textwrap
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -58,6 +59,17 @@ SERVER_URL = f"http://127.0.0.1:{SERVER_PORT}"
 # change in between) -- widened to give real hardware room without hanging
 # forever if llama-server is actually broken.
 STARTUP_TIMEOUT_SECONDS = 240
+# Per-request timeout for each round-trip to llama-server. 120s was too
+# tight for real hardware: a single round can involve processing a large
+# tool result (e.g. a fetched Kiwix article or search-engine summary) AND
+# generating a multi-paragraph answer, and this project's own benchmarks
+# on constrained hardware showed generation as slow as ~3.6-5 tok/s and
+# prompt processing taking up to ~70s for a ~2000-token context on its
+# own (see ROADMAP.md's Phase 5 build log) -- confirmed hitting this in
+# practice, not theoretical. Widened for the same reason as
+# STARTUP_TIMEOUT_SECONDS above: real donated hardware needs more room,
+# not a tighter deadline.
+LLAMA_REQUEST_TIMEOUT_SECONDS = 300
 
 gettext.bindtextdomain("venu-pacific-assistant", "/usr/share/locale")
 gettext.textdomain("venu-pacific-assistant")
@@ -1543,7 +1555,7 @@ def query_assistant(user_text, history, request_approval):
             data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=LLAMA_REQUEST_TIMEOUT_SECONDS) as resp:
             data = json.loads(resp.read())
         message = data["choices"][0]["message"]
         tool_calls = message.get("tool_calls")
@@ -2123,6 +2135,28 @@ class AssistantWindow(Gtk.Window):
         def worker():
             try:
                 reply = query_assistant(text, self.history, self._request_approval)
+            except (TimeoutError, socket.timeout):
+                # A single round-trip exceeded LLAMA_REQUEST_TIMEOUT_SECONDS --
+                # real, seen in practice on slower hardware for questions
+                # needing a large tool result (a fetched article, a web
+                # search) processed and answered in one round. Not a crash,
+                # just slower than the budget allows -- say so plainly
+                # rather than surfacing a bare "timed out" exception string.
+                reply = _(
+                    "Sorry, that's taking longer than expected to answer -- this can happen "
+                    "on slower hardware, especially for questions that need to search offline "
+                    "references or the internet. Try asking again, or try a shorter question."
+                )
+            except urllib.error.URLError as exc:
+                if isinstance(exc.reason, (TimeoutError, socket.timeout)):
+                    reply = _(
+                        "Sorry, that's taking longer than expected to answer -- this can "
+                        "happen on slower hardware, especially for questions that need to "
+                        "search offline references or the internet. Try asking again, or try "
+                        "a shorter question."
+                    )
+                else:
+                    reply = _("Sorry, something went wrong: {error}").format(error=exc)
             except Exception as exc:
                 reply = _("Sorry, something went wrong: {error}").format(error=exc)
             GLib.idle_add(self._on_reply, text, reply, thinking_label)
