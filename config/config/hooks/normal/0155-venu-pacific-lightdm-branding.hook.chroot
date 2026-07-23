@@ -18,3 +18,19 @@ else
     sed -i '/^\[greeter\]/a background=/usr/share/backgrounds/venu-pacific/pacific-ocean.png' \
         /etc/lightdm/lightdm-gtk-greeter.conf
 fi
+
+# The manual-login prompt (greeter-hide-users mode) shows a generic
+# person-silhouette placeholder next to the username field until a real
+# account image is set -- lightdm-gtk-greeter has a native config key for
+# this (default-user-image), no need for a per-user ~/.face file. Reuses
+# the same pixmap icon already installed for the app menu/taskbar, and
+# round-user-image defaults to true, so the greeter crops it into a circle
+# itself -- fine here since the source icon is already a circular mark on
+# a transparent square.
+if grep -q '^default-user-image=' /etc/lightdm/lightdm-gtk-greeter.conf; then
+    sed -i 's#^default-user-image=.*#default-user-image=/usr/share/pixmaps/venu-pacific.png#' \
+        /etc/lightdm/lightdm-gtk-greeter.conf
+else
+    sed -i '/^\[greeter\]/a default-user-image=/usr/share/pixmaps/venu-pacific.png' \
+        /etc/lightdm/lightdm-gtk-greeter.conf
+fi
