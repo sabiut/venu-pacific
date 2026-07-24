@@ -25,6 +25,13 @@ Description=Venu Pacific AI assistant model server (llama-server)
 #
 # Remaining flags match the assistant's own fallback spawn -- keep the
 # two argument lists in sync (venu-pacific-assistant, LlamaServerManager).
+# -fa on / -ctk q8_0 / -ctv q8_0 were tried and reverted: they roughly
+# halved prompt-processing speed on the real (virtualized) target
+# hardware (13.1 tok/s with them vs ~31 without, from llama-server's own
+# timing logs), for a ~0.5GiB KV RAM saving not worth doubling the
+# first-reply wait. f16 KV at -c 8192 fits the 8GB budget fine. Keep this
+# argument list identical to the app's own fallback spawn
+# (venu-pacific-assistant, LlamaServerManager).
 ExecStart=/opt/venu-pacific/llama.cpp/bin/llama-server \
     -m /usr/share/venu-pacific/models/Qwen3-4B-Q4_K_M.gguf \
     --port 8149 \
@@ -33,9 +40,6 @@ ExecStart=/opt/venu-pacific/llama.cpp/bin/llama-server \
     --jinja \
     -np 1 \
     --cache-reuse 256 \
-    -fa on \
-    -ctk q8_0 \
-    -ctv q8_0 \
     --sleep-idle-seconds 600
 Nice=10
 IOSchedulingClass=idle

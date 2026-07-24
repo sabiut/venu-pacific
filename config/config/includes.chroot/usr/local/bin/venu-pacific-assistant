@@ -464,18 +464,22 @@ class LlamaServerManager:
                     # is llama.cpp's own value in its built-in server
                     # presets.
                     "--cache-reuse", "256",
-                    # Flash attention on, explicitly (default is auto):
-                    # required for the quantized KV cache below, and
-                    # speed-neutral-to-slightly-positive on CPU.
-                    "-fa", "on",
-                    # Quantize the KV cache to q8_0: Qwen3-4B's KV at 16384
-                    # context is ~2.25GiB in f16 -- on an 8GB machine
-                    # alongside the 2.4GB model, the GTK app, and a desktop,
-                    # that's the difference between fitting in RAM and
-                    # swapping (and swap silently destroys tok/s). q8_0
-                    # halves it to ~1.1GiB with negligible quality loss.
-                    "-ctk", "q8_0",
-                    "-ctv", "q8_0",
+                    # NOTE: -fa on / -ctk q8_0 / -ctv q8_0 were tried here
+                    # (flash attention + quantized KV cache, to save KV RAM)
+                    # and REVERTED after real measurement. The research that
+                    # suggested them called CPU flash-attention "neutral to
+                    # slightly-positive" -- but on the actual (virtualized)
+                    # target hardware it roughly HALVED prompt-processing
+                    # speed: 13.1 tok/s with the flags vs ~31 tok/s without,
+                    # confirmed from llama-server's own print_timing logs on
+                    # a real install. Clean attribution: a live-patch test
+                    # of the same client against the OLD server (no flags)
+                    # was fast; the rebuild that added these flags was slow.
+                    # The KV RAM they saved (~0.5GiB at -c 8192) isn't worth
+                    # doubling the wait for the first reply on this class of
+                    # machine. f16 KV at 8192 (~1.1GiB) fits the 8GB budget
+                    # fine. Don't re-add these without benchmarking on the
+                    # actual target CPU first.
                 ],
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
