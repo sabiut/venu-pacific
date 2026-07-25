@@ -61,6 +61,11 @@ SERVER_URL = f"http://127.0.0.1:{SERVER_PORT}"
 # change in between) -- widened to give real hardware room without hanging
 # forever if llama-server is actually broken.
 STARTUP_TIMEOUT_SECONDS = 240
+# Total budget for the login-time --prewarm service to keep retrying
+# across server restarts. Generous: it runs in the background at idle
+# priority and its whole job is to absorb a multi-minute cold prefix
+# evaluation before the user ever opens the app.
+PREWARM_TOTAL_BUDGET_SECONDS = 900
 # A fixed total-duration timeout is the wrong shape for a chat reply of
 # unknown length on hardware of unknown speed -- confirmed hitting this in
 # practice (a plain "write an essay about X" timed out twice in a row,
@@ -367,6 +372,47 @@ def _server_port_responds():
         return False
 
 
+def _login_service_present():
+    """True if the login-time model service is enabled/active for this
+    user -- i.e. something OTHER than this app owns the server lifecycle
+    and will (re)bind the port itself.
+
+    This exists because of a real, observed failure: the app checked the
+    port once, found nothing (the service was mid-restart), spawned its
+    OWN llama-server on the same port, and then the service could never
+    bind again -- systemd retried 20 times ("couldn't bind HTTP server
+    socket, port 8149", restart counter at 20) while the two fought over
+    it. Two owners for one port is the bug; asking systemd who owns it
+    is the fix.
+    """
+    try:
+        result = subprocess.run(
+            ["systemctl", "--user", "is-enabled", "venu-pacific-llama.service"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.stdout.strip() in ("enabled", "enabled-runtime", "static"):
+            return True
+        result = subprocess.run(
+            ["systemctl", "--user", "is-active", "venu-pacific-llama.service"],
+            capture_output=True, text=True, timeout=5,
+        )
+        return result.stdout.strip() in ("active", "activating")
+    except Exception:
+        # No systemd, no systemctl, or anything unexpected -- fall back to
+        # the app's own spawn path rather than refusing to work at all.
+        return False
+
+
+def _wait_for_server(timeout):
+    """Polls until the server answers, or the timeout expires."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if _server_port_responds():
+            return True
+        time.sleep(2)
+    return False
+
+
 class LlamaServerManager:
     """Connects to the login-started model server when one exists
     (venu-pacific-llama.service -- started at session login so the
@@ -387,6 +433,19 @@ class LlamaServerManager:
         if _server_port_responds():
             self.external = True
             return
+        # Nothing answered right now -- but if the login service owns this
+        # port, it's mid-(re)start, not absent. Wait for it instead of
+        # spawning a competitor: two processes racing for one port is what
+        # caused a real 20-restart storm that left the server permanently
+        # crash-looping and threw away every prewarm.
+        if _login_service_present():
+            if _wait_for_server(STARTUP_TIMEOUT_SECONDS):
+                self.external = True
+                return
+            raise AssistantStartupError(
+                _("The assistant's model service is enabled but not responding. "
+                  "Try: systemctl --user restart venu-pacific-llama.service")
+            )
         if not os.path.exists(LLAMA_SERVER_BIN):
             raise AssistantStartupError(
                 _("llama-server is missing ({path}).").format(path=LLAMA_SERVER_BIN)
@@ -2009,6 +2068,9 @@ def prewarm_prefix():
     would wait out the full gate timeout for a prewarm that already
     died. A failed prewarm only means the first real message pays the
     prefix cost itself, which was the status quo.
+
+    Returns True only if the warm-up request actually completed, so the
+    --prewarm service can retry instead of reporting false success.
     """
     _prewarm_done.clear()
     try:
@@ -2021,8 +2083,9 @@ def prewarm_prefix():
                 "chat_template_kwargs": {"enable_thinking": False},
             }
         )
+        return True
     except Exception:
-        pass
+        return False
     finally:
         _prewarm_done.set()
 
@@ -2851,13 +2914,25 @@ if __name__ == "__main__":
     # assumptions. Waits for the server to be ready first (the service
     # may still be loading the model when this fires at login).
     if "--prewarm" in sys.argv:
-        deadline = time.time() + STARTUP_TIMEOUT_SECONDS
-        while time.time() < deadline:
-            try:
-                urllib.request.urlopen(f"{SERVER_URL}/health", timeout=2)
+        # Retry rather than one-shot. Observed for real: the server was
+        # crash-restarting (port contention) while this ran, /health
+        # answered once from a dying instance, the single prewarm attempt
+        # then failed on a dropped connection, and the exception was
+        # swallowed -- so this service exited "successfully" having warmed
+        # NOTHING, and the user still paid the full 222s prefix
+        # evaluation on their first message. Now it confirms the warm-up
+        # actually completed, and keeps trying across restarts until it
+        # does or the overall budget runs out.
+        overall_deadline = time.time() + PREWARM_TOTAL_BUDGET_SECONDS
+        while time.time() < overall_deadline:
+            remaining = overall_deadline - time.time()
+            if not _wait_for_server(min(STARTUP_TIMEOUT_SECONDS, remaining)):
                 break
-            except Exception:
-                time.sleep(2)
-        prewarm_prefix()
-        sys.exit(0)
+            if prewarm_prefix():
+                sys.exit(0)
+            # Warm-up attempt failed (server died mid-request, most
+            # likely) -- pause briefly so a systemd restart can land,
+            # then try again rather than declaring false success.
+            time.sleep(5)
+        sys.exit(1)
     main()

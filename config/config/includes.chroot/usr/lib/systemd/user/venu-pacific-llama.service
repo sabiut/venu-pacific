@@ -1,5 +1,9 @@
 [Unit]
 Description=Venu Pacific AI assistant model server (llama-server)
+# Stop retrying after 5 failures in 5 minutes (see RestartSec below for
+# the restart-storm this guards against).
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 # Started at login so the ~2.4GB model's cold disk read (which llama.cpp
@@ -52,7 +56,15 @@ ExecStart=/opt/venu-pacific/llama.cpp/bin/llama-server \
 Nice=10
 IOSchedulingClass=idle
 Restart=on-failure
-RestartSec=5
+# 15s, not 5: a restart storm was observed for real (restart counter hit
+# 20, every attempt failing "couldn't bind HTTP server socket, port
+# 8149") when another process held the port. Retrying three times a
+# minute never helped and buried the real cause in log noise. The app
+# side no longer competes for this port (see _login_service_present in
+# venu-pacific-assistant), so a bind failure now means something genuinely
+# external -- back off and let StartLimit stop the loop instead of
+# hammering.
+RestartSec=15
 
 [Install]
 WantedBy=default.target
