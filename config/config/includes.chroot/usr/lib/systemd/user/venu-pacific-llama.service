@@ -44,6 +44,16 @@ StartLimitBurst=5
 #
 # Keep this argument list identical to the app's own fallback spawn
 # (venu-pacific-assistant, LlamaServerManager).
+# Clear any orphaned llama-server still holding port 8149 before
+# starting. Observed for real: a server from a previous desktop session
+# outlived logout (systemd --user keeps user processes running unless
+# lingering is off), so every restart attempt here failed with
+# "couldn't bind HTTP server socket, port 8149" until the burst limit
+# gave up permanently -- leaving the assistant with no server at all.
+# The leading "-" makes this non-fatal when there is nothing to clean
+# up (the normal case); pkill matches only our own port, and the short
+# sleep lets the socket clear before the bind below.
+ExecStartPre=-/bin/sh -c 'pkill -f "llama-server.*--port 8149" && sleep 2 || true'
 ExecStart=/opt/venu-pacific/llama.cpp/bin/llama-server \
     -m /usr/share/venu-pacific/models/Qwen3-4B-Q4_K_M.gguf \
     --port 8149 \

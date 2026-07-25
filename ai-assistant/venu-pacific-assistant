@@ -386,17 +386,31 @@ def _login_service_present():
     is the fix.
     """
     try:
-        result = subprocess.run(
-            ["systemctl", "--user", "is-enabled", "venu-pacific-llama.service"],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.stdout.strip() in ("enabled", "enabled-runtime", "static"):
-            return True
+        # is-active is the deciding question, not is-enabled. A service
+        # can be enabled yet permanently FAILED (observed for real: it
+        # exhausted its restart limit after a stale process held the port
+        # through every retry). Treating "enabled" alone as "it owns the
+        # port" made the app wait out the full startup budget and then
+        # refuse to work, when the port was in fact free and spawning its
+        # own server would have worked fine -- a worse failure than the
+        # race this guard exists to prevent.
         result = subprocess.run(
             ["systemctl", "--user", "is-active", "venu-pacific-llama.service"],
             capture_output=True, text=True, timeout=5,
         )
-        return result.stdout.strip() in ("active", "activating")
+        state = result.stdout.strip()
+        if state in ("active", "activating", "reloading"):
+            return True
+        if state in ("failed", "inactive", "deactivating"):
+            # Nobody is going to bind the port on our behalf -- the
+            # fallback spawn is the correct path.
+            return False
+        # Unknown/unexpected state: only defer if it's at least enabled.
+        result = subprocess.run(
+            ["systemctl", "--user", "is-enabled", "venu-pacific-llama.service"],
+            capture_output=True, text=True, timeout=5,
+        )
+        return result.stdout.strip() in ("enabled", "enabled-runtime", "static")
     except Exception:
         # No systemd, no systemctl, or anything unexpected -- fall back to
         # the app's own spawn path rather than refusing to work at all.
