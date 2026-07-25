@@ -29,8 +29,16 @@ Description=Venu Pacific AI assistant model server (llama-server)
 # halved prompt-processing speed on the real (virtualized) target
 # hardware (13.1 tok/s with them vs ~31 without, from llama-server's own
 # timing logs), for a ~0.5GiB KV RAM saving not worth doubling the
-# first-reply wait. f16 KV at -c 8192 fits the 8GB budget fine. Keep this
-# argument list identical to the app's own fallback spawn
+# first-reply wait. f16 KV at -c 8192 fits the 8GB budget fine.
+#
+# --spec-type ngram-mod was ALSO measured and rejected (2026-07-25):
+# benchmarked on this exact binary+model with a tool-result-quoting
+# prompt (its supposed best case) and generation got ~27% SLOWER
+# (30 -> 22 chars/s) -- the known reject-heavy failure mode. Don't
+# re-add speed flags here without measuring on target hardware first;
+# this line has now caught two of them.
+#
+# Keep this argument list identical to the app's own fallback spawn
 # (venu-pacific-assistant, LlamaServerManager).
 ExecStart=/opt/venu-pacific/llama.cpp/bin/llama-server \
     -m /usr/share/venu-pacific/models/Qwen3-4B-Q4_K_M.gguf \
