@@ -227,7 +227,16 @@ button.delete-button:hover { color: #e07a5f; }
    anyway. Background-color set explicitly on .dialog-box rather than
    trusting inheritance, for the same reason. */
 window.themed-dialog { background-color: #16232b; }
-.dialog-box { background-color: #16232b; }
+/* Undecorated dialog (no system titlebar -- it doubled the heading and
+   wrapped the dark body in light stock chrome). The box carries its own
+   border so the dialog still reads as a distinct panel over the equally
+   dark app window behind it, plus a teal top edge as the brand accent. */
+.dialog-box {
+    background-color: #16232b;
+    border: 1px solid #2f4650;
+    border-top: 3px solid #1f6f74;
+    border-radius: 4px;
+}
 .dialog-heading { color: #e9e3d6; font-size: 16px; font-weight: bold; }
 .dialog-body { color: #a9b7bd; font-size: 13px; }
 button.dialog-cancel {
@@ -2430,6 +2439,13 @@ class AssistantWindow(Gtk.Window):
         dialog = Gtk.Dialog(title=heading, transient_for=self, modal=True, destroy_with_parent=True)
         dialog.get_style_context().add_class("themed-dialog")
         dialog.set_default_size(420, -1)
+        # No system titlebar: it duplicated the heading ("Allow this
+        # action?" twice) and wrapped the dark themed body in stock light
+        # window chrome -- the exact clash reported from a real screenshot.
+        # The box's own border (see .dialog-box CSS) keeps the dialog
+        # visually distinct from the app behind it, and Escape still
+        # cancels via Gtk.Dialog's built-in key handling.
+        dialog.set_decorated(False)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         box.get_style_context().add_class("dialog-box")
@@ -2449,20 +2465,32 @@ class AssistantWindow(Gtk.Window):
         body_label.get_style_context().add_class("dialog-body")
         box.pack_start(body_label, False, False, 0)
 
-        dialog.get_content_area().set_border_width(0)
-        dialog.get_content_area().add(box)
+        # Our own button row inside the themed body, replacing
+        # Gtk.Dialog's action area -- that strip kept the desktop theme's
+        # light grey background no matter what the content looked like.
+        button_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        button_row.set_halign(Gtk.Align.END)
+        button_row.set_margin_top(6)
 
-        cancel_button = dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        cancel_button = Gtk.Button(label=_("Cancel"))
         cancel_button.get_style_context().add_class("dialog-cancel")
+        cancel_button.connect("clicked", lambda *_a: dialog.response(Gtk.ResponseType.CANCEL))
+        button_row.pack_start(cancel_button, False, False, 0)
 
-        confirm_button = dialog.add_button(
-            confirm_label, Gtk.ResponseType.OK
-        )
+        confirm_button = Gtk.Button(label=confirm_label)
         confirm_button.get_style_context().add_class(
             "dialog-confirm-danger" if is_destructive else "dialog-confirm"
         )
+        confirm_button.connect("clicked", lambda *_a: dialog.response(Gtk.ResponseType.OK))
+        button_row.pack_start(confirm_button, False, False, 0)
+
+        box.pack_start(button_row, False, False, 0)
+
+        dialog.get_content_area().set_border_width(0)
+        dialog.get_content_area().add(box)
 
         dialog.show_all()
+        confirm_button.grab_focus()
         response = dialog.run()
         dialog.destroy()
         return response == Gtk.ResponseType.OK
