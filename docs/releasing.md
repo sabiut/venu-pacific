@@ -74,6 +74,11 @@ without CloudFront and a hard billing alarm.
 
 ### 1a. Cloudflare R2 setup (recommended controllable option)
 
+**Provisioned 2026-07-30**: bucket `venu-pacific-releases`, location hint Asia-Pacific (APAC),
+public access still disabled (enable only at publish time), bucket-scoped Object Read & Write
+API token created and CLI access verified. The account ID for `--endpoint-url` is on the
+bucket's Settings page under **S3 API** (the host part of that URL, without the bucket name).
+
 Cost at this project's scale: the free tier covers 10GB storage, 1M writes and 10M reads per
 month, egress always free. One ISO (4.7GB) or two versions (9.4GB) = **$0/month**. Three versions
 (~14GB) exceeds the free storage and costs about **$0.07/month** on the overage
@@ -97,11 +102,29 @@ Setup, roughly an hour:
    bucket. Save the Access Key ID and Secret — the secret is shown once.
 3. Note your **Account ID** (R2 dashboard sidebar); the endpoint is
    `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
-4. Configure a named AWS-CLI profile so R2 credentials never mix with real AWS ones:
+4. Configure a named AWS-CLI profile so R2 credentials never mix with real AWS ones (this
+   machine also has live AWS credentials, so the separate profile matters):
 
    ```bash
    aws configure --profile r2      # paste the R2 key/secret; region: auto
    ```
+
+   Region must be the literal `auto` -- R2 has no AWS-style regions (bucket location is set by
+   the location hint at creation), but the CLI needs a value to sign requests with.
+
+   Configure and upload as the **same user** throughout: each user has its own `~/.aws/`, so
+   credentials set up as `sabiut` are invisible to `root` and vice versa.
+
+   Verify with a command scoped to the bucket, NOT `aws s3 ls` on its own -- a bucket-scoped
+   token is correctly denied permission to list all buckets in the account, which looks like a
+   credentials failure but isn't:
+
+   ```bash
+   aws s3 ls s3://venu-pacific-releases/ --profile r2 \
+     --endpoint-url https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+   ```
+
+   An empty result with no error means it works.
 
 5. Upload (R2 speaks the S3 API, so the ordinary `aws s3` client works):
 
