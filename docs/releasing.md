@@ -16,12 +16,14 @@ better than any mirror. Cost: doesn't scale past hand-delivery, and needs the ch
 somewhere so recipients can verify what they were given.
 
 **A free file host with large-file support** (SourceForge, Internet Archive). Works today, no
-infrastructure to run, both are used by real distros. Cost: third-party dependency, variable
-download speed into the Pacific.
+infrastructure to run, both are used by real distros, and **zero billing exposure** — no card,
+no way to run up a bill. Cost: third-party dependency, variable download speed into the Pacific.
 
 **BitTorrent** (a `.torrent` + magnet link in the repo). Bandwidth-friendly, standard for distro
 ISOs, and resumable — which matters a lot on unreliable connections. Cost: needs at least one
 stable seed, and some institutional networks block it.
+
+**Cloudflare R2** — the best option if you want a download URL you control (setup: §1a below).
 
 **Self-hosted / regional mirror.** The Phase 4 endgame (a regional mirror is already on the
 roadmap) and by far the best fit long-term. Cost: real hosting money and maintenance now.
@@ -32,6 +34,108 @@ users. Not recommended.
 
 Whatever is chosen, **record the decision and the download URL in `README.md`** so there's one
 canonical answer to "where do I get it".
+
+### How other distros solve this, and what transfers
+
+Debian — the upstream this project is built on — doesn't pay for bandwidth at all. Their model,
+and what's actually copyable at this project's scale:
+
+- **A worldwide volunteer mirror network** (universities, ISPs, research institutes donating
+  servers). Decades in the making; unavailable to a new distro on day one. But note *how* it
+  came about: institutions donated capacity. The natural donors here are exactly the partners
+  already in this roadmap's Phase 4 — USP, SPC, national ICT ministries. A USP-hosted mirror
+  would be faster inside the region than any commercial CDN, and asking costs nothing.
+- **BitTorrent as a first-class channel** — official `.torrent` files published alongside every
+  ISO and prominently linked, precisely because of bandwidth economics. Directly copyable, and
+  its resumability is worth more on Pacific connections than almost anywhere else.
+- **Checksums + GPG signatures on every image**, with the signing key documented. Copyable
+  verbatim; this is §4 below.
+- **A published list of physical-media vendors.** Debian formally endorses buying pressed
+  DVDs/USBs for people who can't download. That's institutional validation for the USB-first
+  approach recommended above — following upstream's reasoning, not improvising.
+- (Jigdo, their tool for rebuilding an ISO from already-mirrored packages, is clever but niche
+  and fiddly — not worth adopting.)
+
+### The number that actually decides this: egress
+
+Storing 4.7GB is trivial everywhere (cents per month). **Bandwidth is the cost.** Every download
+ships 4.7GB out the door:
+
+| Downloads | AWS S3 (~$0.09/GB egress) | Cloudflare R2 | Archive.org / torrent |
+|---|---|---|---|
+| 100 | ~$42 | $0 | $0 |
+| 1,000 | ~$420 | $0 | $0 |
+| 10,000 | ~$4,200 | $0 | $0 |
+
+The asymmetry is categorical, not marginal: R2 has **no egress fees on any tier**, by design, to
+compete with AWS. For a project serving under-resourced communities, uncapped S3 egress is a
+genuinely bad failure mode — success generates the bill. **Do not put a public ISO on plain S3**
+without CloudFront and a hard billing alarm.
+
+### 1a. Cloudflare R2 setup (recommended controllable option)
+
+Cost at this project's scale: the free tier covers 10GB storage, 1M writes and 10M reads per
+month, egress always free. One ISO (4.7GB) or two versions (9.4GB) = **$0/month**. Three versions
+(~14GB) exceeds the free storage and costs about **$0.07/month** on the overage
+($0.015/GB/month). Downloads never add anything.
+
+Caveats, stated honestly:
+
+- **A credit card is required even on the free tier.** There is no card-free path. If zero
+  billing exposure matters more than control, use Archive.org + torrent instead — both are
+  genuinely free and cannot generate a bill.
+- **The free public URL is ugly and rate-limited**: `https://pub-<hash>.r2.dev/...`, which
+  Cloudflare treats as development-grade. A clean branded URL needs a domain on Cloudflare
+  (~$10-15/year) — plausibly worth having anyway.
+- Keep the bucket **read-only to the public**. Write access is where surprise costs come from.
+
+Setup, roughly an hour:
+
+1. Create a Cloudflare account, then **R2 → Create bucket** (name e.g. `venu-pacific-releases`,
+   location hint: Asia-Pacific). Adding a payment method is required even on the free tier.
+2. **R2 → Manage API Tokens → Create token**, permission **Object Read & Write**, scoped to that
+   bucket. Save the Access Key ID and Secret — the secret is shown once.
+3. Note your **Account ID** (R2 dashboard sidebar); the endpoint is
+   `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
+4. Configure a named AWS-CLI profile so R2 credentials never mix with real AWS ones:
+
+   ```bash
+   aws configure --profile r2      # paste the R2 key/secret; region: auto
+   ```
+
+5. Upload (R2 speaks the S3 API, so the ordinary `aws s3` client works):
+
+   ```bash
+   aws s3 cp venu-pacific-26.08-amd64.iso \
+     s3://venu-pacific-releases/ \
+     --profile r2 \
+     --endpoint-url https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+
+   aws s3 cp venu-pacific-26.08-amd64.iso.sha256 \
+     s3://venu-pacific-releases/ \
+     --profile r2 \
+     --endpoint-url https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+   ```
+
+   Multi-gigabyte uploads are chunked automatically and can be resumed by re-running the same
+   command.
+6. **Enable public access**: bucket → Settings → **Public Development URL** (gives the
+   `pub-<hash>.r2.dev` link), or connect a custom domain for a branded URL.
+7. Verify the published file end to end, as a user would:
+
+   ```bash
+   curl -L -o /tmp/test.iso <PUBLIC_URL>/venu-pacific-26.08-amd64.iso
+   curl -L <PUBLIC_URL>/venu-pacific-26.08-amd64.iso.sha256
+   sha256sum /tmp/test.iso     # must match
+   ```
+
+8. Set a **billing alert** in the Cloudflare dashboard anyway. Free tier or not, an alert is how
+   you find out early if something is misconfigured.
+
+**Recommended combination for v1**: USB/preconfigured machines for the pilot (the download
+question is nearly moot when machines are hand-delivered), R2 or Archive.org for the public HTTP
+link, a torrent alongside it once there's demand, and an institutional regional mirror as the
+Phase 4 goal — which is, at this project's scale, Debian's actual answer.
 
 ## 2. Pre-release verification
 
