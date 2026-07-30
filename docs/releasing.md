@@ -160,6 +160,50 @@ question is nearly moot when machines are hand-delivered), R2 or Archive.org for
 link, a torrent alongside it once there's demand, and an institutional regional mirror as the
 Phase 4 goal — which is, at this project's scale, Debian's actual answer.
 
+## 1b. The name: trademark due diligence (researched 2026-07-30)
+
+Not legal advice -- a documented gut-check by a non-lawyer, done before the name went public,
+so the reasoning is on record. Conclusion first: **proceed with "Venu Pacific" for v1; the
+risk is low**. Revisit with a real IP lawyer only if the project incorporates, takes funding,
+or moves into commercial channels.
+
+What exists (all verified against live sources on the date above):
+
+- **Garmin's VENU** is the strongest mark in the space: US-registered (app. 88199274, Garmin
+  Switzerland GmbH), International Class 9, actively used (Venu 4 shipped 2026) -- but its
+  goods specification is wearables/GPS: smartwatches, activity-tracker wristbands, GPS
+  navigation hardware and software. Not operating systems, not desktop software.
+- **The field is already crowded**: VENU registrations coexist today under different owners
+  even inside Class 9 -- Abuzz Entertainment (media display app software, reg. 4677507), VenU
+  LLC (eLearning platform), plus Trimark (flatware), Venu Holding Corp (music venues, NYSE
+  American-listed), VENU+ (attractions retail). A crowded field means every owner's
+  enforceable scope is narrow; nobody owns "Venu" across the board.
+- **Venu Sports** (the Disney/Fox/WBD streaming venture) was shut down January 2025 before
+  launch.
+- **No "Venu Pacific" exists anywhere** -- no company, trademark, or brand. No Linux
+  distribution or OS project uses "Venu" (closest: Victron's "Venus OS", an embedded energy-
+  device distro -- different word, different world).
+
+Why the risk is low for this project specifically: the mark is the composite "Venu Pacific",
+not bare "Venu"; the derivation is genuinely independent and documented (venu is the word for
+volcano on Ambrym, Vanuatu -- the project's identity, not a riff on anyone's brand); the
+product is a free, non-commercial desktop OS for Pacific schools and communities, sharing no
+goods, channels, or customers with a $400 smartwatch; and the visual identity is a volcano.
+Trademark risk is about likelihood of confusion, and there is no plausible consumer who
+downloads a free Debian respin believing it comes from Garmin.
+
+Two standing rules that keep it that way, and one caveat:
+
+1. **Always the full name.** "Venu Pacific" in every user-visible and marketing context;
+   never shorten to just "Venu" where wearables could conceivably be in frame.
+2. **Never ship anything wearable/GPS/fitness-adjacent under this name.** That is Garmin's
+   exact registered territory, and they enforce it.
+3. If the project ever seeks its own US/EU trademark registration, expect the examiner to
+   cite Garmin's Class 9 mark; the composite name + unrelated goods are the counter-argument,
+   but budget for that conversation. A Vanuatu (VanIPO) check is also worth doing at
+   incorporation time -- nothing suggests a conflict, but it wasn't searchable online for
+   this pass.
+
 ## 2. Pre-release verification
 
 - [ ] CI green on `main` (`gh run list --limit 1`)
