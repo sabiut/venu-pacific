@@ -71,6 +71,26 @@ synaptic
 # venu-pacific-notify-updates, see config/config/includes.chroot)
 libnotify-bin
 
+# Error dialogs for shell launchers (venu-pacific-kolibri) -- a
+# Terminal=false .desktop script that fails silently reads as "clicking
+# the icon does nothing"; zenity gives those scripts a real dialog.
+# Verified NOT already on the image (not in the built chroot's dpkg
+# status), unlike the two below.
+zenity
+
+# The AI assistant hard-requires these at import/runtime, so they must be
+# EXPLICIT dependencies, not inherited accidents. Both were already
+# landing on the image, but only via Recommends chains: gir1.2-wnck-3.0
+# through task-xfce-desktop -> Recommends orca (the screen reader!) ->
+# Depends gir1.2-wnck-3.0, and cups-client (lpstat, cancel) through
+# task-desktop -> Recommends cups. Either chain snapping in a future
+# slimming pass (dropping orca is exactly the kind of cut a low-spec
+# image invites) would take the assistant down with it: Wnck is a hard
+# gi.require_version at startup, lpstat/cancel are the whole printer
+# troubleshooting flow.
+gir1.2-wnck-3.0
+cups-client
+
 # Welcome app (welcome-app/venu-pacific-welcome) — GTK3 via PyGObject,
 # not GTK4: XFCE's own native apps here are still GTK3 (confirmed:
 # xfdesktop 4.20 reports "Built with GTK+ 3.24"), so this matches rather

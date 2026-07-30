@@ -33,3 +33,4 @@ config/config/includes.chroot/usr/share/venu-pacific/locales/
 *~
 __pycache__/
 *.pyc
+config/build.log

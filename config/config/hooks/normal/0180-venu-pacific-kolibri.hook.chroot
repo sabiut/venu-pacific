@@ -35,6 +35,14 @@ mkdir -p "$INSTALL_DIR"
 wget -q \
     "https://github.com/learningequality/kolibri/releases/download/v${KOLIBRI_VERSION}/kolibri-${KOLIBRI_VERSION}.pex" \
     -O "$INSTALL_DIR/kolibri.pex"
+
+# Pinned to the sha256 digest GitHub publishes on the v0.19.5 release
+# asset itself (api.github.com/repos/learningequality/kolibri/releases,
+# retrieved 2026-07-30). The --version run below catches "doesn't
+# execute"; this catches "executes but isn't the artifact we tested".
+# Bump this hash together with KOLIBRI_VERSION above.
+echo "96b23180f33efeda60053960e31b254acf4fe90c4275ab944b18167fe3568d46  $INSTALL_DIR/kolibri.pex" \
+    | sha256sum -c -
 chmod +x "$INSTALL_DIR/kolibri.pex"
 
 # Sanity-checks the download actually works before the build moves on --

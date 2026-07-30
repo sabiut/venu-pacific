@@ -79,6 +79,15 @@ wget -q \
     "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf" \
     -O "$MODEL_DIR/Qwen3-4B-Q4_K_M.gguf"
 
+# Fail the build NOW if the 2.4GB download is truncated or corrupted --
+# without this check a bad model file only surfaces as a llama-server
+# load failure on the first boot of an installed system. Pinned hash is
+# the LFS sha256 published in the official Qwen/Qwen3-4B-GGUF repo
+# (huggingface.co/api/models/Qwen/Qwen3-4B-GGUF/tree/main), retrieved
+# 2026-07-30 and cross-checked against the artifact all testing ran on.
+echo "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5  $MODEL_DIR/Qwen3-4B-Q4_K_M.gguf" \
+    | sha256sum -c -
+
 echo "=== Cleaning up build-only dependencies ==="
 rm -rf "$BUILD_DIR"
 apt-get purge -y -qq cmake build-essential git libssl-dev patchelf

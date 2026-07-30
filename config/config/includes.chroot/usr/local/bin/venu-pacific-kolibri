@@ -13,13 +13,50 @@
 # shared one causes it to silently re-extract from scratch on *every*
 # launch instead) -- not worth it for a few-second, one-time, per-user
 # cost. See 0180-venu-pacific-kolibri.hook.chroot for the full story.
-set -e
+#
+# Deliberately NO `set -e`: this runs from a Terminal=false .desktop
+# entry, so an unexplained early exit means "clicking Learn does
+# nothing" -- the user gets zero feedback and no way to know why. Every
+# failure path below ends in a visible dialog instead.
 
 KOLIBRI_BIN="/opt/venu-pacific/kolibri/kolibri.pex"
 KOLIBRI_URL="http://127.0.0.1:8080"
 
+fail() {
+    # zenity ships with the XFCE desktop; notify-send (libnotify-bin, on
+    # the package list) as fallback; xmessage as the last resort that is
+    # effectively always present on an X system.
+    if command -v zenity >/dev/null 2>&1; then
+        zenity --error --title="Learn" --text="$1" 2>/dev/null
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical "Learn" "$1"
+    elif command -v xmessage >/dev/null 2>&1; then
+        xmessage "$1"
+    fi
+    exit 1
+}
+
+[ -x "$KOLIBRI_BIN" ] || fail "The Learn app is not installed correctly (missing $KOLIBRI_BIN). Please report this."
+
 if ! "$KOLIBRI_BIN" status >/dev/null 2>&1; then
-    "$KOLIBRI_BIN" start --background --port 8080
+    "$KOLIBRI_BIN" start --background --port 8080 >/dev/null 2>&1 \
+        || fail "The Learn app could not start. If this keeps happening, restart the computer and try again."
 fi
+
+# Wait until the server actually answers HTTP before opening the browser.
+# `start --background` returns before the web server is serving, and the
+# very first launch also runs database setup -- slow on the low-spec
+# hardware this targets. Without this wait, the user's first-ever
+# experience of Learn is Firefox's "Unable to connect" page with no hint
+# that a simple reload would fix it. 90s budget: generous for first-run
+# DB migration, and the loop exits the moment the server responds.
+tries=0
+until wget -q --spider -T 2 "$KOLIBRI_URL" 2>/dev/null; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 90 ]; then
+        fail "The Learn app is taking too long to start. Please try again in a minute."
+    fi
+    sleep 1
+done
 
 exec firefox-esr "$KOLIBRI_URL"

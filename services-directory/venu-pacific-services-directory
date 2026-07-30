@@ -80,9 +80,18 @@ def _load_countries():
         if not filename.endswith(".json"):
             continue
         path = os.path.join(CONTENT_DIR, filename)
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        countries[data["name"]] = data
+        # One bad file must never take the app down with it. This runs in
+        # main() before any window exists, and the launcher is
+        # Terminal=false -- an unhandled JSONDecodeError here means the
+        # app silently fails to open. A corrupt or stray .json is
+        # skipped; every valid country still loads, and the no-content
+        # screen covers the all-bad case.
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            countries[str(data["name"])] = data
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
     return countries
 
 
@@ -172,7 +181,12 @@ class ServicesDirectoryWindow(Gtk.Window):
         self._clear_content()
         data = self.countries[name]
 
-        for category_key, category in data.get("categories", {}).items():
+        categories = data.get("categories", {})
+        if not isinstance(categories, dict):
+            categories = {}
+        for category_key, category in categories.items():
+            if not isinstance(category, dict):
+                continue
             self.content_box.pack_start(
                 self._build_category_section(category), False, False, 0
             )
@@ -191,16 +205,21 @@ class ServicesDirectoryWindow(Gtk.Window):
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         card.get_style_context().add_class("card")
 
-        expander = Gtk.Expander(label=category["label"])
+        expander = Gtk.Expander(label=str(category.get("label", _("Services"))))
         expander.set_expanded(False)
 
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         inner.set_border_width(12)
 
         for item in category.get("items", []):
+            # A content entry missing its name is that entry's problem,
+            # not the whole screen's -- skip it rather than KeyError out
+            # of _show_country half-rendered. Same for sources below.
+            if not isinstance(item, dict) or "name" not in item:
+                continue
             item_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
 
-            name_label = Gtk.Label(label=item["name"], xalign=0, wrap=True)
+            name_label = Gtk.Label(label=str(item["name"]), xalign=0, wrap=True)
             name_label.get_style_context().add_class("item-name")
             item_box.pack_start(name_label, False, False, 0)
 
@@ -237,8 +256,10 @@ class ServicesDirectoryWindow(Gtk.Window):
         section.pack_start(title, False, False, 0)
 
         for source in sources:
+            if not isinstance(source, dict) or "url" not in source or "label" not in source:
+                continue
             link = Gtk.LinkButton.new_with_label(
-                source["url"], source["label"]
+                str(source["url"]), str(source["label"])
             )
             link.set_halign(Gtk.Align.START)
             link.get_style_context().add_class("source-text")

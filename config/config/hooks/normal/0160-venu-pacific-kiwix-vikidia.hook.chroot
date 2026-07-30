@@ -17,3 +17,10 @@ mkdir -p "$DEST_DIR"
 wget -q \
     "https://download.kiwix.org/zim/vikidia/vikidia_en_all_maxi_2026-06.zim" \
     -O "$DEST_DIR/vikidia.zim"
+
+# Kiwix publishes a .sha256 sidecar next to every ZIM -- this hash is
+# from vikidia_en_all_maxi_2026-06.zim.sha256 (retrieved 2026-07-30).
+# A corrupt ZIM otherwise only fails when a user first opens it. Bump
+# together with the filename above.
+echo "6de94f77c36ce6ca9656c6aef77b3f4e38e736a27470b14eb9c4e887ad4b5425  $DEST_DIR/vikidia.zim" \
+    | sha256sum -c -

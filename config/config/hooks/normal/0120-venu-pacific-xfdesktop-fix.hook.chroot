@@ -26,9 +26,21 @@ set -e
 WORKDIR="$(mktemp -d)"
 cd "$WORKDIR"
 
+# snapshot.debian.org, not ftp.debian.org: the live pool deletes
+# superseded sid versions, so the old URL was guaranteed to 404 on the
+# first rebuild after 4.20.2-3 lands. Snapshot URLs are immutable
+# forever. The timestamp is when this version first appeared in the
+# archive (from snapshot's own metadata); the sha256s were computed from
+# these exact files on 2026-07-30 and pin what every test build used.
+SNAPSHOT_BASE="https://snapshot.debian.org/archive/debian/20260429T083731Z/pool/main/x/xfdesktop4"
 wget -q \
-    "http://ftp.debian.org/debian/pool/main/x/xfdesktop4/xfdesktop4_4.20.2-2_amd64.deb" \
-    "http://ftp.debian.org/debian/pool/main/x/xfdesktop4/xfdesktop4-data_4.20.2-2_all.deb"
+    "$SNAPSHOT_BASE/xfdesktop4_4.20.2-2_amd64.deb" \
+    "$SNAPSHOT_BASE/xfdesktop4-data_4.20.2-2_all.deb"
+
+sha256sum -c - <<'EOF'
+e968a4b0a7bb9fbb4d66602d2144c78027f61f00507d709581fdab723bb73682  xfdesktop4_4.20.2-2_amd64.deb
+b995c3696f62b3121097b3653987187a138fb949dd1aca69e2a055c6ddd0d6ca  xfdesktop4-data_4.20.2-2_all.deb
+EOF
 
 apt-get install -y --no-install-recommends \
     ./xfdesktop4_4.20.2-2_amd64.deb \

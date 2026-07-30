@@ -18,7 +18,7 @@
 # actually exist on this hardware.
 
 MARKER="$HOME/.config/venu-pacific/.defaults-applied"
-WALLPAPER="/usr/share/backgrounds/venu-pacific/pacific-ocean.png"
+WALLPAPER="/usr/share/backgrounds/venu-pacific/sunrise-volcano.png"
 
 if [ -f "$MARKER" ]; then
     exit 0

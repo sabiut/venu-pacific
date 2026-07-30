@@ -143,7 +143,10 @@ GRID_TILES = [
     ),
     (
         _("Translate"),
-        _("Bislama, English, French"),
+        # Country-neutral on purpose: this same image ships to Vanuatu
+        # and Fiji, and a hardcoded language list is wrong somewhere the
+        # moment it names one country's languages.
+        _("Local languages and English"),
         ("preferences-desktop-locale-symbolic", "network-transmit-receive-symbolic"),
         "T",
         "chip-translate",
