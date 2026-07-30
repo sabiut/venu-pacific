@@ -1,12 +1,21 @@
 # branding/
 
-Visual identity for Venu Pacific — a wayfinding star compass crossed with
-wave-swell lines (echoing Marshallese stick charts), in a deep-ocean palette.
-Chosen deliberately over the palm-tree/sunset cliché.
+Visual identity for Venu Pacific.
 
-- `logo/` — `mark.svg` (the star mark, transparent), `icon-square.svg` (badge
-  variant with an ink circular backing, for app-icon contexts), `lockup.svg`
-  (mark + wordmark, for docs), plus rasterized PNG exports of each.
+**The mark (2026-07-30, current)**: a twin-peaked volcano forming a V, its
+slopes traced with circuit lines, a wave at its base and an eruption above,
+inside a ring on deep navy — venu is the word for volcano on Ambrym, and this
+is that identity drawn literally. Supplied by the project owner
+(`venu-mark-source.png`, 1254px square); deployed everywhere as a
+circle-cropped badge (`venu-mark-circle-{1024,512,256}.png`) because the navy
+field is part of the design — the ring is an outline, so background removal
+would hollow the emblem out, and the round badge matches the greeter's
+circular avatar crop anyway.
+
+- `logo/` — the volcano mark above (current), plus the earlier wayfinding-star
+  compass set (`mark.svg`, `icon-square.svg`, `lockup.svg` + PNG exports),
+  kept for the wordmark lockup and history. The compass was always a
+  placeholder; the volcano mark replaces it in every deployed location.
 - `wallpapers/` — `pacific-ocean.{svg,png}`, 1920x1080, the same motif as a
   full desktop background: scattered wayfinding stars, the mark glowing
   bottom-right, a faint horizon swell line. Calm in the top-left where XFCE
