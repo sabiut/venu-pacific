@@ -2755,6 +2755,16 @@ class AssistantWindow(Gtk.Window):
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         row.set_border_width(14)
 
+        self.attach_button = self._icon_button(
+            ("mail-attachment-symbolic", "document-open-symbolic"),
+            "+",
+            "icon-button",
+            _("Attach a file for the assistant to read"),
+        )
+        self.attach_button.set_sensitive(False)
+        self.attach_button.connect("clicked", self.on_attach_file)
+        row.pack_start(self.attach_button, False, False, 0)
+
         self.entry = Gtk.Entry()
         self.entry.set_placeholder_text(_("Ask something…"))
         self.entry.set_sensitive(False)
@@ -2772,6 +2782,63 @@ class AssistantWindow(Gtk.Window):
         row.pack_start(self.send_button, False, False, 0)
 
         return row
+
+    def on_attach_file(self, *_args):
+        """Paperclip button: pick a file, drop a read-this-file request into
+        the entry. The user still writes (or edits) the actual question and
+        presses send themselves -- attaching never auto-sends, so they can
+        ask something specific about the file rather than a generic
+        analysis. Reading happens through the normal read_file tool, so the
+        home-directory sandbox and the PDF text extraction both apply
+        unchanged."""
+        dialog = Gtk.FileChooserDialog(
+            title=_("Choose a file for the assistant to read"),
+            transient_for=self,
+            action=Gtk.FileChooserAction.OPEN,
+        )
+        dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        dialog.add_button(_("Open"), Gtk.ResponseType.OK)
+        dialog.set_current_folder(HOME_DIR)
+
+        doc_filter = Gtk.FileFilter()
+        doc_filter.set_name(_("Documents (PDF and text)"))
+        for pattern in ("*.pdf", "*.txt", "*.md", "*.csv", "*.log"):
+            doc_filter.add_pattern(pattern)
+        dialog.add_filter(doc_filter)
+        all_filter = Gtk.FileFilter()
+        all_filter.set_name(_("All files"))
+        all_filter.add_pattern("*")
+        dialog.add_filter(all_filter)
+
+        response = dialog.run()
+        path = dialog.get_filename() if response == Gtk.ResponseType.OK else None
+        dialog.destroy()
+        if path:
+            self._insert_file_reference(path)
+
+    def _insert_file_reference(self, path):
+        """Separate from the dialog handler so it can be tested without a
+        file-chooser on screen."""
+        resolved = os.path.realpath(path)
+        if resolved != HOME_DIR and not resolved.startswith(HOME_DIR + os.sep):
+            # Same boundary the read_file tool enforces -- catching it here
+            # gives actionable advice instead of a later tool refusal. USB
+            # sticks mount under /media, so this is the exact message a
+            # teacher with a worksheet on a stick needs.
+            self._add_message(
+                _(
+                    "That file is outside your Home folder, so the assistant "
+                    "can't read it. Copy it into your Home folder (for "
+                    "example into Documents) and attach it from there."
+                ),
+                is_user=False,
+            )
+            return
+        self.entry.set_text(
+            _("Please read this file and tell me about it: {path}").format(path=resolved)
+        )
+        self.entry.set_position(-1)
+        self.entry.grab_focus()
 
     def _start_server_async(self):
         self._server_starting = True
@@ -2822,6 +2889,7 @@ class AssistantWindow(Gtk.Window):
             self.retry_button.hide()
             self.entry.set_sensitive(True)
             self.send_button.set_sensitive(True)
+            self.attach_button.set_sensitive(True)
             self.new_chat_button.set_sensitive(True)
             self.conversation_list.set_sensitive(True)
             self.entry.grab_focus()
@@ -2897,6 +2965,7 @@ class AssistantWindow(Gtk.Window):
         self.entry.set_text("")
         self.entry.set_sensitive(False)
         self.send_button.set_sensitive(False)
+        self.attach_button.set_sensitive(False)
         # Freeze conversation navigation while a reply is in flight. Switching
         # conversations, starting a new chat, or deleting the current one
         # mid-generation would swap self.history/current_conv_id under the
@@ -3120,6 +3189,7 @@ class AssistantWindow(Gtk.Window):
 
         self.entry.set_sensitive(True)
         self.send_button.set_sensitive(True)
+        self.attach_button.set_sensitive(True)
         self.new_chat_button.set_sensitive(True)
         self.conversation_list.set_sensitive(True)
         self.entry.grab_focus()
