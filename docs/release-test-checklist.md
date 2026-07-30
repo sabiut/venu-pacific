@@ -59,11 +59,14 @@ The detailed flow lives in [manual-test-checklist.md](manual-test-checklist.md) 
 
 ## 4. Venu Pacific Hub
 
-- [ ] Launches from the applications menu; hero tile + 2x2 grid render with accent-colored icon
+- [ ] Launches from the applications menu; hero tile + 2x3 grid render with accent-colored icon
       chips; no stock-grey chrome
 - [ ] Each tile opens the right app: Ask → assistant, Learn → Kolibri in Firefox,
-      Services → services directory, Safety → disaster readiness, Translate → assistant
+      Services → services directory, Safety → disaster readiness, Translate → assistant,
+      Encyclopedia → Vikidia in kiwix-desktop, Help & Feedback → help page in Firefox
 - [ ] Hub stays open after launching a tile (it's a home screen, not a one-shot menu)
+- [ ] The new volcano-circle logo (not the compass) shows in the Hub header, all app windows,
+      the applications menu, and the login-screen avatar
 
 ## 5. AI assistant
 
@@ -107,6 +110,8 @@ Tools — approval dialogs must appear for every gated one:
 
 - [ ] **Disaster Readiness**: opens, country selector works (Vanuatu + Fiji), hazard cards
       expand, emergency contacts card has the coral accent edge, source links present
+- [ ] Vanuatu shows **four** hazards including "Volcano and ashfall" (added 2026-07-30);
+      Fiji shows three
 - [ ] **Services Directory**: opens, both countries, categories expand, contacts/links present
 - [ ] **Learn (Kolibri)**: launches, Firefox opens the local server, setup wizard appears.
       **Expected**: no content channels — v1 ships the app only. Confirm this reads as
@@ -114,6 +119,12 @@ Tools — approval dialogs must appear for every gated one:
 - [ ] **Offline Content Guide** and **Vikidia**: both open; Vikidia has real bundled content
 - [ ] **Synaptic**: launches and can search a package (apt works post-install)
 - [ ] Update notification timer exists (`systemctl --user list-timers | grep venu`)
+- [ ] **Help & Feedback** page opens (menu or Hub tile), shows the real version number (not
+      `@VENU_VERSION@` — that placeholder surviving means the 0190 hook didn't run), and the
+      report-a-problem email/URL are correct
+- [ ] Version stamp: `cat /etc/venu-pacific-release` prints version + build date, and
+      `grep PRETTY_NAME /etc/os-release` says "Venu Pacific 26.08 (based on Debian 13)"
+      while `ID=debian` is untouched (compatibility)
 
 ## 7. Hardware reality (real machines only)
 

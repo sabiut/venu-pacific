@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Help & Feedback
+GenericName=Venu Pacific help and problem reporting
+Comment=What's on this computer, common questions, and how to report a problem
+Exec=firefox-esr /usr/share/venu-pacific/help/index.html
+Icon=venu-pacific
+Terminal=false
+Categories=System;Documentation;
+Keywords=help;feedback;support;report;problem;bug;about;version;

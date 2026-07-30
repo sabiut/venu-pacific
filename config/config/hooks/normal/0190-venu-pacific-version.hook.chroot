@@ -1,0 +1,32 @@
+#!/bin/sh
+# Stamps the release version into the image, so every field bug report
+# can answer "which build are you on?" -- without this, reports from the
+# pilot are ambiguous the moment a second ISO exists.
+#
+# The version is defined HERE and only here; the git tag for a release
+# (v26.08) must match it. Bump both together.
+set -e
+
+VENU_VERSION="26.08"
+
+# /etc/os-release is a symlink to /usr/lib/os-release (Debian base-files).
+# Deliberately only ADDING to it, not replacing NAME/ID -- scripts and
+# package tooling detect "debian" via ID=, and breaking that for branding
+# would be all cost. PRETTY_NAME is the display string (neofetch, GRUB
+# os-prober, GNOME/XFCE about dialogs) so that one is ours.
+sed -i "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Venu Pacific ${VENU_VERSION} (based on Debian 13)\"/" \
+    /usr/lib/os-release
+{
+    echo "VARIANT=\"Venu Pacific\""
+    echo "VARIANT_ID=venu-pacific"
+    echo "VENU_PACIFIC_VERSION=\"${VENU_VERSION}\""
+} >> /usr/lib/os-release
+
+# One-line answer file for support: `cat /etc/venu-pacific-release`.
+echo "Venu Pacific ${VENU_VERSION} (built $(date -u +%Y-%m-%d))" > /etc/venu-pacific-release
+
+# The Help & Feedback page shows the version so users can read it off
+# the screen when reporting a problem.
+sed -i "s/@VENU_VERSION@/${VENU_VERSION}/g" /usr/share/venu-pacific/help/index.html
+
+echo "=== Venu Pacific version stamped: ${VENU_VERSION} ==="
