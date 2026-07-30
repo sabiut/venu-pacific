@@ -2774,6 +2774,21 @@ class AssistantWindow(Gtk.Window):
         self.entry.set_text("")
         self.entry.set_sensitive(False)
         self.send_button.set_sensitive(False)
+        # Freeze conversation navigation while a reply is in flight. Switching
+        # conversations, starting a new chat, or deleting the current one
+        # mid-generation would swap self.history/current_conv_id under the
+        # worker and destroy the thinking bubble it streams into -- the reply
+        # would then be appended and SAVED into whichever conversation the
+        # user switched to (verified: two clicks were enough to corrupt a
+        # stored conversation this way). One in-flight turn at a time is
+        # already this app's model (entry + send are disabled the same way).
+        self.new_chat_button.set_sensitive(False)
+        self.conversation_list.set_sensitive(False)
+        # Belt-and-braces: also capture which conversation this turn belongs
+        # to at send time, so _on_reply files the exchange where it started
+        # even if some future code path unfreezes navigation.
+        conv_id_at_send = self.current_conv_id
+        history_at_send = self.history
         if not self.history:
             # First message of a fresh view (either app startup's "Ready"
             # placeholder or the "New conversation" placeholder) -- clear it
@@ -2791,7 +2806,7 @@ class AssistantWindow(Gtk.Window):
 
             try:
                 reply = query_assistant(
-                    text, self.history, self._request_approval, on_partial_reply=on_partial
+                    text, history_at_send, self._request_approval, on_partial_reply=on_partial
                 )
             except (TimeoutError, socket.timeout):
                 # Streaming turned this into a genuine idle timeout (see
@@ -2853,7 +2868,15 @@ class AssistantWindow(Gtk.Window):
             except Exception as exc:
                 reply = _("Sorry, something went wrong: {error}").format(error=exc)
                 is_error = True
-            GLib.idle_add(self._on_reply, text, reply, thinking_label, is_error)
+            GLib.idle_add(
+                self._on_reply,
+                text,
+                reply,
+                thinking_label,
+                is_error,
+                conv_id_at_send,
+                history_at_send,
+            )
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -2888,18 +2911,24 @@ class AssistantWindow(Gtk.Window):
         result; the final call in _on_reply below does the real cleanup
         once the full text is in.
         """
+        if thinking_label.get_parent() is None:
+            # The bubble was destroyed (view cleared) -- navigation is frozen
+            # during generation so this shouldn't happen, but a destroyed
+            # widget must never be touched regardless.
+            return False
         thinking_label.set_text(_wrap_message_text(partial_text))
         self._scroll_to_bottom()
         return False
 
-    def _on_reply(self, user_text, reply, thinking_label, is_error=False):
-        pulsing_logo = getattr(thinking_label, "pulsing_logo", None)
-        if pulsing_logo is not None:
-            pulsing_logo.hide()
-        thinking_label.set_text(_wrap_message_text(reply))
-        style = thinking_label.get_style_context()
-        style.remove_class("message-thinking")
-        style.add_class("message-assistant")
+    def _on_reply(self, user_text, reply, thinking_label, is_error, conv_id_at_send, history_at_send):
+        if thinking_label.get_parent() is not None:
+            pulsing_logo = getattr(thinking_label, "pulsing_logo", None)
+            if pulsing_logo is not None:
+                pulsing_logo.hide()
+            thinking_label.set_text(_wrap_message_text(reply))
+            style = thinking_label.get_style_context()
+            style.remove_class("message-thinking")
+            style.add_class("message-assistant")
 
         # A failed turn (timeout, connection error, etc.) stays visible in
         # the chat transcript above (the bubble is already on screen) but
@@ -2914,8 +2943,14 @@ class AssistantWindow(Gtk.Window):
         # visible on screen either way since that bubble doesn't depend on
         # self.history at all.
         if not is_error:
-            self.history.append({"role": "user", "content": user_text})
-            self.history.append({"role": "assistant", "content": reply})
+            # Append and save against the conversation captured at send time
+            # (see on_send) -- NOT self.history/self.current_conv_id, which
+            # belong to whatever the user is looking at now. With navigation
+            # frozen they are the same thing; the capture keeps a completed
+            # exchange from ever being filed into the wrong conversation if
+            # that freeze is ever loosened.
+            history_at_send.append({"role": "user", "content": user_text})
+            history_at_send.append({"role": "assistant", "content": reply})
 
             # Persist after every completed turn, not just on switch/close, so a
             # crash or force-quit never loses more than the in-flight reply (see
@@ -2923,13 +2958,19 @@ class AssistantWindow(Gtk.Window):
             # per conversation). First reply of a fresh chat mints its id here,
             # not at chat-start, so quitting without sending anything never
             # leaves an empty conversation cluttering the sidebar.
-            if self.current_conv_id is None:
-                self.current_conv_id = uuid.uuid4().hex[:12]
-            _save_conversation(self.current_conv_id, _make_title(self.history[0]["content"]), self.history)
+            if conv_id_at_send is None:
+                conv_id_at_send = uuid.uuid4().hex[:12]
+                if self.current_conv_id is None:
+                    self.current_conv_id = conv_id_at_send
+            _save_conversation(
+                conv_id_at_send, _make_title(history_at_send[0]["content"]), history_at_send
+            )
             self._refresh_conversation_list()
 
         self.entry.set_sensitive(True)
         self.send_button.set_sensitive(True)
+        self.new_chat_button.set_sensitive(True)
+        self.conversation_list.set_sensitive(True)
         self.entry.grab_focus()
         GLib.idle_add(self._scroll_to_bottom)
         return False
