@@ -1,30 +1,37 @@
-# Venu Pacific welcome app translation template.
+# Fijian (vosa vakaViti) translation for Venu Pacific welcome app.
 # Copyright (C) 2026 Venu Pacific contributors
 # This file is distributed under the same license as the venu-pacific package.
 #
-# Regenerate with scripts/update-pot.sh — do not hand-edit the msgid list,
-# only the surrounding header if the project metadata changes.
+# STATUS: DRAFT -- NOT YET REVIEWED BY A FLUENT FIJIAN SPEAKER.
+# Drafted 2026-07-30 in standard (Bauan) Fijian. The Bislama catalog went
+# through native review before it was trusted (see bi/venu-pacific.po); this
+# one must get the same treatment before any Fiji deployment. Terms chosen
+# from common usage: cagilaba (cyclone), ua loka (tsunami), uneune
+# (earthquake), leqa tubukoso (disaster, as used by Fiji NDMO). Where no
+# accepted Fijian term exists for a computing word (software, spreadsheet),
+# the English word is kept, matching how the Bislama catalog handles the
+# same cases.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: venu-pacific\n"
 "Report-Msgid-Bugs-To: https://github.com/sabiut/venu-pacific/issues\n"
 "POT-Creation-Date: 2026-07-21 00:00+0000\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2026-07-30 00:00+0000\n"
+"Last-Translator: Venu Pacific contributors\n"
+"Language-Team: Fijian <LL@li.org>\n"
+"Language: fj\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: welcome-app/venu-pacific-welcome:81
 msgid "Welcome to Venu Pacific"
-msgstr ""
+msgstr "Ni sa bula vinaka ki Venu Pacific"
 
 #: welcome-app/venu-pacific-welcome:113
 msgid "Welcome"
-msgstr ""
+msgstr "Ni sa bula"
 
 #: welcome-app/venu-pacific-welcome:124
 msgid ""
@@ -32,49 +39,56 @@ msgid ""
 "real conditions here: limited bandwidth, older hardware, and routine "
 "cyclone/tsunami/earthquake exposure."
 msgstr ""
+"E dua na desktop e yavutaki ena Debian, e buli me baleta na yasayasa "
+"vaka-Pasifika kei na ituvaki dina eke: na intaneti e dau berabera, na "
+"komipiuta sa makawa, kei na cagilaba, na ua loka, kei na uneune era dau "
+"yaco wasoma."
 
 #: welcome-app/venu-pacific-welcome:143
 msgid "Language"
-msgstr ""
+msgstr "Na vosa"
 
 #: welcome-app/venu-pacific-welcome:147
 msgid "English"
-msgstr ""
+msgstr "Vakavalagi"
 
 #: welcome-app/venu-pacific-welcome:153
 msgid "Bislama"
-msgstr ""
+msgstr "Bislama"
 
 #: welcome-app/venu-pacific-welcome:158
 msgid "Fijian"
-msgstr ""
+msgstr "Vakaviti"
 
 #: welcome-app/venu-pacific-welcome:162
 msgid "What's included"
-msgstr ""
+msgstr "Na veika e tiko kina"
 
 #: welcome-app/venu-pacific-welcome:65
 msgid "Web browsing"
-msgstr ""
+msgstr "Sarasara ena intaneti"
 
 #: welcome-app/venu-pacific-welcome:66
 msgid "Documents, spreadsheets, presentations"
-msgstr ""
+msgstr "Na ivola, spreadsheet, kei na presentation"
 
 #: welcome-app/venu-pacific-welcome:67
 msgid "Image editing"
-msgstr ""
+msgstr "Veisautaki ni itaba"
 
 #: welcome-app/venu-pacific-welcome:70
 msgid ""
 "Offline Wikipedia and Pacific health/agriculture/disaster info. Works "
 "with no internet connection"
 msgstr ""
+"Wikipedia e sega ni gadreva na intaneti, kei na itukutuku me baleta na "
+"bula, na teitei, kei na leqa tubukoso ena Pasifika. E cakacaka ke sega "
+"na intaneti"
 
 #: welcome-app/venu-pacific-welcome:75
 msgid "Install or remove software"
-msgstr ""
+msgstr "Vakacuruma se kauta tani na software"
 
 #: welcome-app/venu-pacific-welcome:187
 msgid "Get Started"
-msgstr ""
+msgstr "Tekivu"

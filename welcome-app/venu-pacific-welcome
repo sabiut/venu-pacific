@@ -195,7 +195,7 @@ class WelcomeWindow(Gtk.Window):
         section.pack_start(section_title, False, False, 0)
 
         english = Gtk.RadioButton.new_with_label(None, _("English"))
-        english.set_active(CURRENT_LANG != "bi")
+        english.set_active(CURRENT_LANG not in ("bi", "fj"))
         section.pack_start(english, False, False, 0)
 
         bislama = Gtk.RadioButton.new_with_label_from_widget(
@@ -205,8 +205,16 @@ class WelcomeWindow(Gtk.Window):
         bislama.set_active(CURRENT_LANG == "bi")
         section.pack_start(bislama, False, False, 0)
 
+        fijian = Gtk.RadioButton.new_with_label_from_widget(
+            english,
+            _("Fijian"),
+        )
+        fijian.set_active(CURRENT_LANG == "fj")
+        section.pack_start(fijian, False, False, 0)
+
         english.connect("toggled", self._on_language_toggled, "en")
         bislama.connect("toggled", self._on_language_toggled, "bi")
+        fijian.connect("toggled", self._on_language_toggled, "fj")
 
         return section
 

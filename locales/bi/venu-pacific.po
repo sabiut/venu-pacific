@@ -49,6 +49,10 @@ msgstr "Inglis"
 msgid "Bislama"
 msgstr "Bislama"
 
+#: welcome-app/venu-pacific-welcome:158
+msgid "Fijian"
+msgstr "Fijian"
+
 #: welcome-app/venu-pacific-welcome:162
 msgid "What's included"
 msgstr "Wanem i stap insaed"
