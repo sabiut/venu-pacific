@@ -348,8 +348,15 @@ def _save_conversation(conv_id, title, messages):
     tmp_path = path + ".tmp"
     # Write-then-rename so a crash mid-write never leaves a half-written
     # JSON file behind that _load_conversation would then have to reject.
+    # The fsync before the rename is load-bearing on this project's target
+    # hardware (unstable power): without it the rename can reach disk
+    # before the file's data blocks do, and a power cut in that window
+    # leaves the REAL file empty or truncated -- the exact outcome the
+    # write-then-rename pattern claims to prevent.
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
     os.replace(tmp_path, path)
 
 
@@ -728,6 +735,16 @@ def tool_get_wifi_status():
             text=True,
             timeout=10,
         )
+        # A nonzero exit (NetworkManager not running, no wifi hardware)
+        # must NOT fall through to "not connected" -- that turns "could
+        # not check" into a confidently wrong answer. Same pattern for
+        # the lpstat tools below: with cupsd down, lpstat exits nonzero
+        # with empty stdout, which used to read as "no printers
+        # configured" -- the worst possible reply in the exact
+        # printer-troubleshooting flow these tools exist for.
+        if result.returncode != 0:
+            detail = result.stderr.strip() or "the network service may not be running"
+            return f"Could not check Wi-Fi status: {detail}"
         for line in result.stdout.splitlines():
             if line.startswith("yes:"):
                 _active, ssid, signal = line.split(":", 2)
@@ -742,6 +759,17 @@ def tool_get_printer_status():
         result = subprocess.run(
             ["lpstat", "-p"], capture_output=True, text=True, timeout=10
         )
+        if result.returncode != 0:
+            stderr = result.stderr.strip()
+            # "lpstat: No destinations added." goes to stderr with exit 1
+            # on some cups versions -- that one genuinely means no
+            # printers, not a broken cups.
+            if "no destinations" in stderr.lower():
+                return "No printers are currently configured."
+            return (
+                "Could not check printer status -- the printing service (CUPS) "
+                f"may not be running. Detail: {stderr or 'unknown error'}"
+            )
         return result.stdout.strip() or "No printers are currently configured."
     except Exception as exc:
         return f"Could not check printer status: {exc}"
@@ -756,6 +784,14 @@ def tool_get_print_queue():
         result = subprocess.run(
             ["lpstat", "-o"], capture_output=True, text=True, timeout=10
         )
+        if result.returncode != 0:
+            stderr = result.stderr.strip()
+            if "no destinations" in stderr.lower():
+                return "The print queue is empty."
+            return (
+                "Could not check the print queue -- the printing service (CUPS) "
+                f"may not be running. Detail: {stderr or 'unknown error'}"
+            )
         return result.stdout.strip() or "The print queue is empty."
     except Exception as exc:
         return f"Could not check the print queue: {exc}"
@@ -1240,12 +1276,22 @@ def tool_close_window(name):
 
 
 def tool_open_wifi_settings():
-    subprocess.Popen(["nm-connection-editor"])
+    # FileNotFoundError (editor not installed) is raised by Popen itself,
+    # before any child exists -- returning it as text keeps the turn alive
+    # (the dispatch loop also guards this, but a truthful "couldn't open
+    # it" beats a generic tool-failed message).
+    try:
+        subprocess.Popen(["nm-connection-editor"])
+    except OSError as exc:
+        return f"Could not open the network settings: {exc}"
     return "Opened the Wi-Fi/network connection settings."
 
 
 def tool_open_printer_settings():
-    subprocess.Popen(["system-config-printer"])
+    try:
+        subprocess.Popen(["system-config-printer"])
+    except OSError as exc:
+        return f"Could not open the printer settings: {exc}"
     return "Opened the printer settings."
 
 
@@ -1383,6 +1429,23 @@ def tool_read_file(path):
 def tool_write_file(path, content):
     try:
         resolved = _resolve_home_path(path)
+        # No writes to hidden files or into hidden directories, ever --
+        # even with approval. "Inside $HOME" alone still allows
+        # ~/.bashrc, ~/.profile, ~/.config/autostart/*.desktop: a
+        # prompt-injection payload (in a read PDF, a search result)
+        # could ask to "save notes" there and gain code execution at
+        # next login, behind a dialog that shows a path plus a truncated
+        # content preview to a non-technical user. Documents live in
+        # visible paths; dotfiles are configuration, and configuration
+        # is not this tool's job. Check the RESOLVED path, so a visible
+        # symlink pointing at a dotfile is caught too.
+        relative = os.path.relpath(resolved, HOME_DIR)
+        if any(part.startswith(".") for part in relative.split(os.sep)):
+            return (
+                f"Refusing to write to hidden files or folders: {path}. "
+                "Hidden paths hold system and application configuration; "
+                "the assistant only writes ordinary documents."
+            )
         os.makedirs(os.path.dirname(resolved), exist_ok=True)
         with open(resolved, "w", encoding="utf-8") as f:
             f.write(content)
@@ -2017,6 +2080,7 @@ def _stream_chat_completion(payload, on_content_delta=None):
 
     content_parts = []
     tool_calls_state = {}
+    finished = False
 
     with urllib.request.urlopen(req, timeout=LLAMA_STREAM_IDLE_TIMEOUT_SECONDS) as resp:
         for raw_line in resp:
@@ -2032,6 +2096,7 @@ def _stream_chat_completion(payload, on_content_delta=None):
                 continue
             data = line[len("data:"):].strip()
             if data == "[DONE]":
+                finished = True
                 break
             try:
                 chunk = json.loads(data)
@@ -2039,7 +2104,19 @@ def _stream_chat_completion(payload, on_content_delta=None):
                 continue
             choices = chunk.get("choices") or []
             if not choices:
+                # llama-server reports mid-stream failures as an SSE event
+                # with an "error" object instead of "choices". Skipping it
+                # silently would let the truncated text below pass as a
+                # complete reply.
+                if isinstance(chunk.get("error"), dict):
+                    raise ConnectionError(
+                        chunk["error"].get("message", "the model server reported an error")
+                    )
                 continue
+            if choices[0].get("finish_reason"):
+                # Belt-and-braces alongside [DONE]: either explicit
+                # termination signal counts as a complete stream.
+                finished = True
             delta = choices[0].get("delta") or {}
 
             piece = delta.get("content")
@@ -2051,6 +2128,17 @@ def _stream_chat_completion(payload, on_content_delta=None):
             tool_call_deltas = delta.get("tool_calls")
             if tool_call_deltas:
                 _accumulate_tool_call_deltas(tool_calls_state, tool_call_deltas)
+
+    if not finished:
+        # The socket closed cleanly but no [DONE]/finish_reason ever
+        # arrived -- llama-server died or was restarted mid-generation
+        # (terminate() produces exactly this clean close). Confirmed
+        # failure mode from the review: without this check the half-reply
+        # was returned as a genuine complete message and SAVED to history,
+        # the same fake-context poisoning the is_error mechanism exists to
+        # prevent. Raising routes it through the normal error path: shown
+        # to the user, never persisted.
+        raise ConnectionError("the model server closed the stream before finishing the reply")
 
     message = {"role": "assistant", "content": "".join(content_parts) or None}
     if tool_calls_state:
@@ -2192,19 +2280,37 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
                 arguments = json.loads(call["function"].get("arguments") or "{}")
             except json.JSONDecodeError:
                 arguments = {}
+            if not isinstance(arguments, dict):
+                # The model can emit arguments as a JSON array or scalar --
+                # anything but a dict would crash **-expansion or
+                # _describe_gated_call's .get() before any handler ran.
+                arguments = {}
 
+            # Any exception from a handler must become the TOOL RESULT, not
+            # propagate -- one failed tool (e.g. nm-connection-editor not
+            # installed raising FileNotFoundError) used to abort the whole
+            # turn as "Sorry, something went wrong", discarding everything
+            # already streamed. Returned as text, the model can react ("I
+            # couldn't open the settings because...") and the turn survives.
             if name in READ_ONLY_TOOLS:
                 try:
                     result = READ_ONLY_TOOLS[name](**arguments)
                 except TypeError as exc:
                     result = f"Bad arguments for {name}: {exc}"
+                except Exception as exc:
+                    result = f"The {name} tool failed: {exc}"
             elif name in GATED_TOOLS:
-                description = _describe_gated_call(name, arguments)
+                try:
+                    description = _describe_gated_call(name, arguments)
+                except Exception:
+                    description = name.replace("_", " ")
                 if request_approval(description):
                     try:
                         result = GATED_TOOLS[name](**arguments)
                     except TypeError as exc:
                         result = f"Bad arguments for {name}: {exc}"
+                    except Exception as exc:
+                        result = f"The {name} tool failed: {exc}"
                 else:
                     result = "The user did not approve this action."
             else:
@@ -2490,7 +2596,13 @@ class AssistantWindow(Gtk.Window):
         dialog.get_content_area().add(box)
 
         dialog.show_all()
-        confirm_button.grab_focus()
+        # Default focus goes to CANCEL, deliberately: every use of this
+        # dialog is a security gate (approve a system action) or a
+        # destructive one (delete a conversation). A stray Enter/Space --
+        # easy for the non-technical users this targets -- must land on
+        # the safe choice, never silently approve. Confirming requires an
+        # actual click or a deliberate Tab+Enter.
+        cancel_button.grab_focus()
         response = dialog.run()
         dialog.destroy()
         return response == Gtk.ResponseType.OK
@@ -2897,7 +3009,17 @@ class AssistantWindow(Gtk.Window):
             return False
 
         GLib.idle_add(show_dialog)
-        done.wait(timeout=120)
+        # No timeout, deliberately. The old 120s wait created a desync: a
+        # user still reading the dialog past two minutes had the worker
+        # give up behind their back ("user did not approve"), so their
+        # eventual Allow click closed the dialog and did nothing --
+        # silently. Blocking indefinitely is safe here: this runs on a
+        # daemon worker thread, never the GTK main loop, and the modal
+        # dialog on screen is exactly what the user is being waited on
+        # for. The dialog cannot leak -- destroy_with_parent closes it if
+        # the window goes away, and closing it (Escape/Cancel/X) always
+        # sets the event.
+        done.wait()
         return result.get("allowed", False)
 
     def _on_partial_reply(self, thinking_label, partial_text):
@@ -2962,10 +3084,28 @@ class AssistantWindow(Gtk.Window):
                 conv_id_at_send = uuid.uuid4().hex[:12]
                 if self.current_conv_id is None:
                     self.current_conv_id = conv_id_at_send
-            _save_conversation(
-                conv_id_at_send, _make_title(history_at_send[0]["content"]), history_at_send
-            )
-            self._refresh_conversation_list()
+            try:
+                _save_conversation(
+                    conv_id_at_send, _make_title(history_at_send[0]["content"]), history_at_send
+                )
+                self._refresh_conversation_list()
+            except Exception as exc:
+                # A failed save (disk full is the realistic case on this
+                # hardware) must never take the input box down with it --
+                # this except is what keeps the re-enables below reachable.
+                # The exchange is still in memory, and every later turn
+                # rewrites the whole history, so the next save that
+                # succeeds heals this one. Surface it instead of logging
+                # silently: the user should know their history isn't
+                # landing on disk.
+                self._add_message(
+                    _(
+                        "Warning: this conversation could not be saved "
+                        "({error}). It stays on screen, but may be lost when "
+                        "the assistant is closed. The disk may be full."
+                    ).format(error=exc),
+                    is_user=False,
+                )
 
         self.entry.set_sensitive(True)
         self.send_button.set_sensitive(True)
