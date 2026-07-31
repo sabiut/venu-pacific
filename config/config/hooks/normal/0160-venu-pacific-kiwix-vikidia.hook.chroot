@@ -24,3 +24,26 @@ wget -q \
 # together with the filename above.
 echo "6de94f77c36ce6ca9656c6aef77b3f4e38e736a27470b14eb9c4e887ad4b5425  $DEST_DIR/vikidia.zim" \
     | sha256sum -c -
+
+# Bislama content (added 2026-08-01, from the content-sourcing research
+# -- see docs/content-sourcing.md). Two tiny ZIMs, ~21MB combined:
+#
+# - The Bislama Wikipedia: the only Bislama-language encyclopedia in
+#   existence, 16.6MB with images. CC BY-SA.
+# - PhET science simulations with a Bislama interface, 4.4MB. CC BY 4.0.
+#
+# Filenames double as the collection names the AI assistant shows for
+# its offline-search tool (it maps every *.zim basename in this
+# directory), so they are descriptive rather than the upstream dated
+# names. Hashes from Kiwix's own .sha256 sidecars, retrieved 2026-08-01.
+wget -q \
+    "https://download.kiwix.org/zim/wikipedia/wikipedia_bi_all_maxi_2026-07.zim" \
+    -O "$DEST_DIR/wikipedia-bislama.zim"
+echo "c261a19d841d7016e25533fb355bd19cfb78a7dcd082209fe2c6e41f447df049  $DEST_DIR/wikipedia-bislama.zim" \
+    | sha256sum -c -
+
+wget -q \
+    "https://download.kiwix.org/zim/phet/phet_bi_all_2026-05.zim" \
+    -O "$DEST_DIR/phet-bislama.zim"
+echo "d9d2a0f426f15373982d65c0d1a886821c38dc402c7f2e673710af7660445d07  $DEST_DIR/phet-bislama.zim" \
+    | sha256sum -c -

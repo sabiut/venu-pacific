@@ -117,6 +117,10 @@ Tools — approval dialogs must appear for every gated one:
       **Expected**: no content channels — v1 ships the app only. Confirm this reads as
       intentional to a first-time user, not broken.
 - [ ] **Offline Content Guide** and **Vikidia**: both open; Vikidia has real bundled content
+- [ ] **Wikipedia (Bislama)** and **Science Simulations (PhET)** menu entries open their
+      bundled ZIMs in kiwix-desktop (added 2026-08-01; ~21MB combined)
+- [ ] Assistant's offline search now lists three collections (vikidia, wikipedia-bislama,
+      phet-bislama) — ask it "what offline collections do you have?"
 - [ ] **Synaptic**: launches and can search a package (apt works post-install)
 - [ ] Update notification timer exists (`systemctl --user list-timers | grep venu`)
 - [ ] **Help & Feedback** page opens (menu or Hub tile), shows the real version number (not

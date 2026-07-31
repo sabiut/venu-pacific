@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Science Simulations (PhET)
+GenericName=Interactive science and maths simulations
+Comment=Interactive physics, chemistry and maths simulations with a Bislama interface. Works with no internet connection
+Exec=kiwix-desktop /usr/share/venu-pacific/kiwix-content/phet-bislama.zim
+Icon=kiwix-desktop
+Terminal=false
+Categories=Education;Science;
+Keywords=kiwix;phet;science;physics;simulation;maths;bislama;offline;

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Wikipedia (Bislama)
+GenericName=Offline encyclopedia in Bislama
+Comment=The Bislama-language Wikipedia. Works with no internet connection, no download needed
+Exec=kiwix-desktop /usr/share/venu-pacific/kiwix-content/wikipedia-bislama.zim
+Icon=kiwix-desktop
+Terminal=false
+Categories=Education;
+Keywords=kiwix;wikipedia;bislama;encyclopedia;offline;
