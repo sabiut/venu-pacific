@@ -13,6 +13,11 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
+  # The volcano mark -- same circle badge deployed as the OS's app icon,
+  # login avatar, installer and boot-splash logo (branding/logo/), so the
+  # website and the OS read as one thing.
+  logo: assets/venu-mark.png
+  favicon: assets/venu-mark.png
   palette:
     # Dark first -- matches the OS's own design language.
     - media: "(prefers-color-scheme: dark)"
