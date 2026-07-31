@@ -1,0 +1,53 @@
+# Documentation site config -- built and deployed to GitHub Pages by
+# .github/workflows/docs.yml on every push to main that touches docs/.
+# The site serves the DOCS; the ISO itself is served from Cloudflare R2
+# (see docs/releasing.md) -- Pages has no business hosting a 4.7GB binary.
+site_name: Venu Pacific
+site_description: >-
+  A Debian-based desktop Linux distribution built for the Pacific Islands
+  region -- offline-first, low-spec-friendly, in English, Bislama and Fijian.
+site_url: https://sabiut.github.io/venu-pacific/
+repo_url: https://github.com/sabiut/venu-pacific
+repo_name: sabiut/venu-pacific
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    # Dark first -- matches the OS's own design language.
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - For users & schools:
+      - Download & verify: download.md
+      - Install guide: install-guide.md
+  - For contributors:
+      - Release process: releasing.md
+      - Release test checklist: release-test-checklist.md
+      - Calamares install test (historical): manual-test-checklist.md
+      - Content sourcing research: content-sourcing.md

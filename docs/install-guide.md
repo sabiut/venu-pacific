@@ -33,7 +33,7 @@ wherever it's mounted — including as a desktop icon in the live session itself
 
 This produces `config/live-image-amd64.hybrid.iso` (~2.9GB). Building from source needs root
 (for the chroot/debootstrap steps) and takes anywhere from 15 minutes to over an hour depending
-on your connection — see [CONTRIBUTING.md](../CONTRIBUTING.md) if you want to help build these
+on your connection — see [CONTRIBUTING.md](https://github.com/sabiut/venu-pacific/blob/main/CONTRIBUTING.md) if you want to help build these
 as part of a release process instead of one-off locally.
 
 ## 2. Write it to a USB drive
