@@ -113,7 +113,7 @@ Setup, roughly an hour:
    the location hint at creation), but the CLI needs a value to sign requests with.
 
    Configure and upload as the **same user** throughout: each user has its own `~/.aws/`, so
-   credentials set up as `sabiut` are invisible to `root` and vice versa.
+   credentials set up as a regular user are invisible to `root` and vice versa.
 
    Verify with a command scoped to the bucket, NOT `aws s3 ls` on its own -- a bucket-scoped
    token is correctly denied permission to list all buckets in the account, which looks like a

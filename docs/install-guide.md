@@ -2,7 +2,8 @@
 
 ## What you need
 
-- A USB flash drive, 4GB or larger — writing the ISO to it **erases everything already on it**
+- A USB flash drive, **8GB or larger** (the ISO is ~4.7GB) — writing the ISO to it
+  **erases everything already on it**
 - A computer to write the ISO with (any OS works — the write step below uses `dd`, but a GUI
   tool like [Balena Etcher](https://www.balena.io/etcher/) or Rufus works just as well if you'd
   rather not use a terminal)
@@ -10,31 +11,29 @@
 
 ## 1. Get the ISO
 
-Either download a released ISO, or build one yourself from source:
+Either download a released ISO (see [Download & verify](download.md)), or build one yourself
+from source:
 
 ```sh
 ./scripts/sync-locales.sh
 cd config
-lb config \
-  --distribution trixie \
-  --archive-areas "main contrib non-free non-free-firmware" \
-  --binary-images iso-hybrid \
-  --debian-installer none \
-  --iso-volume "Venu Pacific"
+sudo lb clean
+lb config
 sudo lb build
 ```
 
-(`--debian-installer none` is deliberate: Calamares, launched from the live desktop, is the
-only install-to-disk path here — see step 5 below. The classic Debian Installer was briefly
-wired into the boot menu too before this was caught; having two different, inconsistent
-installers on one image was more confusing than helpful. `--iso-volume` overrides live-build's
-own default of "Debian (trixie) (<date>)", which otherwise shows up as the disc's name
-wherever it's mounted — including as a desktop icon in the live session itself.)
+Run `lb config` **with no arguments** — every setting (distribution, archive areas, the
+"Venu Pacific" ISO volume label, no classic Debian Installer) is already committed in the
+`config/` tree, and `lb config` regenerates from those saved values. Passing flags on the
+command line overrides the committed configuration and is how stale branding once ended up
+on a build.
 
-This produces `config/live-image-amd64.hybrid.iso` (~2.9GB). Building from source needs root
-(for the chroot/debootstrap steps) and takes anywhere from 15 minutes to over an hour depending
-on your connection — see [CONTRIBUTING.md](https://github.com/sabiut/venu-pacific/blob/main/CONTRIBUTING.md) if you want to help build these
-as part of a release process instead of one-off locally.
+This produces `config/live-image-amd64.hybrid.iso` (~4.7GB — it includes the AI model and
+the offline encyclopedias). Building needs root (for the chroot/debootstrap steps), downloads
+several GB on the first run, and takes from under an hour to several hours depending on
+connection and hardware — see
+[CONTRIBUTING.md](https://github.com/sabiut/venu-pacific/blob/main/CONTRIBUTING.md) if you
+want to help build these as part of a release process instead of one-off locally.
 
 ## 2. Write it to a USB drive
 
@@ -48,9 +47,12 @@ Look for your USB drive by its size and model (it'll show `TRAN` as `usb`). Then
 
 ```sh
 umount /dev/sdX1   # unmount any partitions first, if auto-mounted
-dd if=live-image-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress oflag=sync
+dd if=venu-pacific-26.08-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 sync
 ```
+
+(Use the filename of the ISO you actually have — a self-built one is named
+`live-image-amd64.hybrid.iso`.)
 
 Replace `/dev/sdX` with your actual drive (e.g. `/dev/sda`) — **not** a partition like
 `/dev/sdX1`. This takes several minutes depending on the drive's write speed.
@@ -107,17 +109,11 @@ applications menu (this is Calamares' own menu entry). It runs
 > has been walked through in a QEMU/KVM VM, including confirming the resulting installed system
 > reboots to a working login screen, logs in, and loads the desktop correctly. If you hit
 > anything unexpected, please open an issue with what step failed and what hardware you're on.
->
-> **Known cosmetic gap**: Calamares currently shows Debian's own branding (its logo, "Install
-> Debian" wording on the desktop shortcut, generic slideshow) instead of Venu Pacific's. The
-> package that gives Calamares its working configuration (`calamares-settings-debian`) ships
-> that branding by default, and a Venu Pacific–specific override hasn't been built yet. It
-> doesn't affect what the installer actually does (partitioning, user creation, installing).
 
 ## After installing
 
-On first login, a welcome window shows once, covering what's included and the current language
-status (English is the only fully working option in this release; Bislama support is in
-progress). Software updates are checked automatically at a scheduled off-peak time and shown as a
-notification — nothing downloads without you choosing to, in **Synaptic**, since bandwidth here is
-often capped or metered.
+On first login, a welcome window shows once, covering what's included, with a language choice
+of English, Bislama, or Fijian (Bislama has been reviewed by a fluent speaker; the Fijian
+translation is new and still awaiting native review). Software updates are checked automatically
+at a scheduled off-peak time and shown as a notification — nothing downloads without you
+choosing to, in **Synaptic**, since bandwidth here is often capped or metered.

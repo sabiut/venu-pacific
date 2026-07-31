@@ -43,10 +43,10 @@ First-run language choice: English, Bislama, or Fijian.
 
 - [Release process](releasing.md) — how a release is built, verified, and published
 - [Release test checklist](release-test-checklist.md) — the full pre-release pass
-- [Content sourcing](content-sourcing.md) — research into Vanuatu educational
-  content: what exists, what's openly licensed, who to partner with
 - [Contributing](https://github.com/sabiut/venu-pacific/blob/main/CONTRIBUTING.md)
-  and the [source repository](https://github.com/sabiut/venu-pacific)
+  and the [source repository](https://github.com/sabiut/venu-pacific) — including
+  further working documents in
+  [docs/](https://github.com/sabiut/venu-pacific/tree/main/docs)
 
 ## Status
 

@@ -18,8 +18,10 @@ Two files:
 A 4.7 GB download is heavy on Pacific connections — that's deliberate:
 everything (including the AI model and the offline encyclopedias) is inside,
 so the machine needs nothing from the internet afterwards. **If a download is
-impractical where you are, ask about a preloaded USB stick instead** — for
-the pilot, physical media is the primary channel, not the fallback.
+impractical where you are,
+[open an issue](https://github.com/sabiut/venu-pacific/issues) to ask about a
+preloaded USB stick instead** — for the pilot, physical media is the primary
+channel, not the fallback.
 
 ## Verifying the download
 

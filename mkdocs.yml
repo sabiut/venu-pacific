@@ -46,6 +46,16 @@ markdown_extensions:
   - toc:
       permalink: true
 
+# Working documents stay in the repo but off the published site: the
+# historical Calamares test record, the content-sourcing research notes
+# (carefully caveated, but research working notes all the same), and the
+# directory README (redundant with this nav). The repo is public either
+# way -- this is curation, not secrecy.
+exclude_docs: |
+  README.md
+  manual-test-checklist.md
+  content-sourcing.md
+
 nav:
   - Home: index.md
   - For users & schools:
@@ -54,5 +64,3 @@ nav:
   - For contributors:
       - Release process: releasing.md
       - Release test checklist: release-test-checklist.md
-      - Calamares install test (historical): manual-test-checklist.md
-      - Content sourcing research: content-sourcing.md
