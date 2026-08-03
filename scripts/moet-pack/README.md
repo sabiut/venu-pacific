@@ -29,8 +29,12 @@ Directly fetchable from moet.gov.vu (Apache directory listings):
 - `/docs/covid-updates/` — home-school packages: ECCE (Bislama), Primary
   (EN-BI ~129MB, FR-BI ~130MB), Junior Secondary (EN 6.7MB, FR 2.8MB)
 - `/docs/ecce-school-packages/` — the 2024 ECCE re-issue
-- `/docs/sounds/` — 40 radio-lesson WAVs (~12-13GB; transcode to Opus
-  before packing — do NOT ship WAVs)
+
+Deliberately OUT of scope (dropped from the permission request 2026-08-03):
+the `/docs/sounds/` radio-lesson WAVs — 12-13GB of 2022 episodic broadcast
+audio, the heaviest item for the least value, and the only one that needed a
+format-conversion condition complicating an otherwise clean "unmodified
+copies" ask. Can be requested separately later if a pilot school wants them.
 
 Needs manual handling (Google Drive, not directly scriptable):
 

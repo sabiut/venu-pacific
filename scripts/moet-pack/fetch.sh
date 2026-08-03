@@ -48,9 +48,8 @@ enumerate)
         echo "=== $BASE/$d/ ==="
         list_dir "$d" || echo "(unreachable right now -- gov.vu sites are flaky, retry later)"
     done
-    echo "=== $BASE/sounds/ (radio lessons -- listed only, transcode before packing) ==="
-    $CURL "$BASE/sounds/" | grep -oiE 'href="[^"]+\.(wav|mp3)"' | sed 's/^href="//i;s/"$//' | sort -u \
-        || echo "(unreachable right now)"
+    # Radio lessons (/docs/sounds/) deliberately not listed: dropped from
+    # the permission request 2026-08-03 -- see README.md.
     ;;
 freeze)
     require_permission
