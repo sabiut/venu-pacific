@@ -34,8 +34,11 @@ EOF
 }
 
 list_dir() {
-    # Apache directory listing -> PDF filenames, one per line
-    $CURL "$BASE/$1/" | grep -oiE 'href="[^"]+\.pdf"' | sed 's/^href="//i;s/"$//' \
+    # Apache directory listing -> PDF filenames, one per line. Short
+    # timeout, single try: listings are tiny, and when gov.vu is down
+    # (often) the answer should arrive in seconds, not minutes -- the
+    # long-retry $CURL is for the actual file downloads only.
+    curl -sfL -m 30 "$BASE/$1/" | grep -oiE 'href="[^"]+\.pdf"' | sed 's/^href="//i;s/"$//' \
         | grep -v '^/' | sort -u
 }
 
