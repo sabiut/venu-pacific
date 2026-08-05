@@ -1,7 +1,7 @@
 # docs/
 
 Supporting documentation beyond the top-level README.md and CONTRIBUTING.md.
-Published as a website at https://sabiut.github.io/venu-pacific/ — built by
+Published as a website at https://venupacific.org/ — built by
 `.github/workflows/docs.yml` from `mkdocs.yml` on every push to main that
 touches docs/.
 

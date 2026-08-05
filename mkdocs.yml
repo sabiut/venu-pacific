@@ -6,7 +6,7 @@ site_name: Venu Pacific
 site_description: >-
   A Debian-based desktop Linux distribution built for the Pacific Islands
   region -- offline-first, low-spec-friendly, in English, Bislama and Fijian.
-site_url: https://sabiut.github.io/venu-pacific/
+site_url: https://venupacific.org/
 repo_url: https://github.com/sabiut/venu-pacific
 repo_name: sabiut/venu-pacific
 edit_uri: edit/main/docs/

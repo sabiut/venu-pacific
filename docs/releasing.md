@@ -76,9 +76,11 @@ without CloudFront and a hard billing alarm.
 
 **Provisioned 2026-07-30**: bucket `venu-pacific-releases`, location hint Asia-Pacific (APAC),
 bucket-scoped Object Read & Write API token created and CLI access verified. Public
-Development URL enabled 2026-08-05: `https://pub-5c5e5d1fa33748e99ea39f47ec77d4a8.r2.dev`
-(stable; linked from docs/download.md — file links 404 until the release upload). A custom
-domain (download.venupacific.org) can replace it later without changing anything else. The account ID for `--endpoint-url` is on the
+Development URL enabled 2026-08-05 (`https://pub-5c5e5d1fa33748e99ea39f47ec77d4a8.r2.dev`),
+then superseded the same week by the custom domain **`https://download.venupacific.org`**
+(venupacific.org registered on Cloudflare; docs/download.md links point there; file links
+404 until the release upload). The docs site lives at **https://venupacific.org/** (GitHub
+Pages custom domain, CNAME-flattened apex). The account ID for `--endpoint-url` is on the
 bucket's Settings page under **S3 API** (the host part of that URL, without the bucket name).
 
 Cost at this project's scale: the free tier covers 10GB storage, 1M writes and 10M reads per

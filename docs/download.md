@@ -13,8 +13,8 @@ Two files:
 
 | File | What it is |
 |---|---|
-| [`venu-pacific-26.08-amd64.iso`](https://pub-5c5e5d1fa33748e99ea39f47ec77d4a8.r2.dev/venu-pacific-26.08-amd64.iso) | The system image (~4.7 GB) |
-| [`venu-pacific-26.08-amd64.iso.sha256`](https://pub-5c5e5d1fa33748e99ea39f47ec77d4a8.r2.dev/venu-pacific-26.08-amd64.iso.sha256) | Its checksum, for verifying the download |
+| [`venu-pacific-26.08-amd64.iso`](https://download.venupacific.org/venu-pacific-26.08-amd64.iso) | The system image (~4.7 GB) |
+| [`venu-pacific-26.08-amd64.iso.sha256`](https://download.venupacific.org/venu-pacific-26.08-amd64.iso.sha256) | Its checksum, for verifying the download |
 
 A 4.7 GB download is heavy on Pacific connections — that's deliberate:
 everything (including the AI model and the offline encyclopedias) is inside,
