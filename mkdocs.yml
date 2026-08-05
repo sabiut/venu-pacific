@@ -40,6 +40,12 @@ theme:
     - content.code.copy
     - search.suggest
 
+# Removes the "Made with Material for MkDocs" footer line -- permitted by
+# the theme (MIT-licensed; generator notice is optional via this exact
+# setting). The theme still gets its credit in the repo/commit history.
+extra:
+  generator: false
+
 markdown_extensions:
   - admonition
   - attr_list
