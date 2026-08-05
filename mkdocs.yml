@@ -46,21 +46,20 @@ markdown_extensions:
   - toc:
       permalink: true
 
-# Working documents stay in the repo but off the published site: the
-# historical Calamares test record, the content-sourcing research notes
-# (carefully caveated, but research working notes all the same), and the
-# directory README (redundant with this nav). The repo is public either
-# way -- this is curation, not secrecy.
+# The published site carries ONLY the user-facing pages: Home, Download,
+# Install. Everything else -- release runbook, test checklists, research
+# notes, the directory README -- stays in the repo (public either way;
+# this is curation, not secrecy) and is reachable via the GitHub links
+# on the Home page. A ministry official or teacher visiting the site
+# should never land on maintainer ops notes.
 exclude_docs: |
   README.md
   manual-test-checklist.md
   content-sourcing.md
+  releasing.md
+  release-test-checklist.md
 
 nav:
   - Home: index.md
-  - For users & schools:
-      - Download & verify: download.md
-      - Install guide: install-guide.md
-  - For contributors:
-      - Release process: releasing.md
-      - Release test checklist: release-test-checklist.md
+  - Download & verify: download.md
+  - Install guide: install-guide.md

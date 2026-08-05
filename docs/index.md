@@ -41,12 +41,11 @@ First-run language choice: English, Bislama, or Fijian.
 
 ## For contributors
 
-- [Release process](releasing.md) — how a release is built, verified, and published
-- [Release test checklist](release-test-checklist.md) — the full pre-release pass
-- [Contributing](https://github.com/sabiut/venu-pacific/blob/main/CONTRIBUTING.md)
-  and the [source repository](https://github.com/sabiut/venu-pacific) — including
-  further working documents in
-  [docs/](https://github.com/sabiut/venu-pacific/tree/main/docs)
+Venu Pacific is open source. Start with
+[CONTRIBUTING.md](https://github.com/sabiut/venu-pacific/blob/main/CONTRIBUTING.md)
+in the [source repository](https://github.com/sabiut/venu-pacific); the release
+process, test checklists, and research notes live in
+[docs/](https://github.com/sabiut/venu-pacific/tree/main/docs) there.
 
 ## Status
 
