@@ -1,5 +1,17 @@
 # Installing Venu Pacific
 
+Prefer to watch first? The whole process, start to finish:
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; margin: 1em 0; border-radius: 6px;">
+  <iframe src="https://www.youtube-nocookie.com/embed/K9iK1J_cpV0"
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+          allow="encrypted-media; picture-in-picture; fullscreen"
+          allowfullscreen
+          title="Venu Pacific installation walkthrough"></iframe>
+</div>
+
+(Requires internet to play — the written steps below cover everything offline.)
+
 ## What you need
 
 - A USB flash drive, **8GB or larger** (the ISO is ~4.7GB) — writing the ISO to it

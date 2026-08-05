@@ -37,7 +37,8 @@ First-run language choice: English, Bislama, or Fijian.
 ## For users and schools
 
 - [Download & verify](download.md) — where to get the ISO and how to check it
-- [Install guide](install-guide.md) — writing a USB stick, booting, installing
+- [Install guide](install-guide.md) — writing a USB stick, booting, installing —
+  including a [video walkthrough](install-guide.md) of the whole process
 
 ## For contributors
 
