@@ -18,19 +18,39 @@ mode="${1:-}"
 flag="${2:-}"
 
 require_permission() {
-    if [ "$flag" != "--i-have-written-permission" ]; then
+    # Two acceptable flags:
+    #   --i-have-written-permission : the CDU's yes exists (PERMISSION.md)
+    #   --stage                     : staging only -- downloading from MoET's
+    #                                 own public site for local preparation,
+    #                                 which is what the site offers. The line
+    #                                 that needs their written yes is
+    #                                 DISTRIBUTION, and that gate lives in
+    #                                 stage-into-image.sh, which refuses
+    #                                 without PERMISSION.md.
+    case "$flag" in
+    --i-have-written-permission)
+        if [ ! -f PERMISSION.md ]; then
+            echo "NOTE: PERMISSION.md not found here yet -- record the written yes" >&2
+            echo "      (from whom, date, scope) before this pack goes anywhere." >&2
+        fi
+        ;;
+    --stage)
+        cat >&2 << 'EOF'
+STAGING ONLY: content downloaded now must NOT be put on any ISO, USB, or
+machine given to anyone until MoET's written permission is recorded as
+PERMISSION.md in this directory. stage-into-image.sh enforces this.
+EOF
+        ;;
+    *)
         cat >&2 << 'EOF'
 REFUSING: these materials are (c) Ministry of Education and Training, all
-rights reserved. Downloading-to-redistribute needs MoET's written yes first
-(see README.md). Once you have it, re-run with --i-have-written-permission
-and record the permission email as PERMISSION.md in this directory.
+rights reserved. Use --stage to download-and-prepare locally (lawful use of
+MoET's own public site; nothing may be distributed), or
+--i-have-written-permission once the CDU's yes is recorded as PERMISSION.md.
 EOF
         exit 1
-    fi
-    if [ ! -f PERMISSION.md ]; then
-        echo "NOTE: PERMISSION.md not found here yet -- record the written yes" >&2
-        echo "      (from whom, date, scope) before this pack goes anywhere." >&2
-    fi
+        ;;
+    esac
 }
 
 list_dir() {
