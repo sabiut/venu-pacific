@@ -12,12 +12,12 @@ windowPlacement: center
 strings:
     productName:         Venu Pacific
     shortProductName:    Venu Pacific
-    version:              1.0
-    shortVersion:         1.0
-    versionedName:       Venu Pacific 1.0
-    shortVersionedName:  Venu Pacific 1.0
+    version:              26.08
+    shortVersion:         26.08
+    versionedName:       Venu Pacific 26.08
+    shortVersionedName:  Venu Pacific 26.08
     bootloaderEntryName: Venu Pacific
-    productUrl:          https://github.com/sabiut/venu-pacific
+    productUrl:          https://venupacific.org
     supportUrl:          https://github.com/sabiut/venu-pacific/issues
     knownIssuesUrl:      https://github.com/sabiut/venu-pacific/issues
     releaseNotesUrl:     https://github.com/sabiut/venu-pacific/releases

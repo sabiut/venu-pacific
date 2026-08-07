@@ -5,6 +5,9 @@ region. Designed around the region's real conditions: expensive/unreliable
 bandwidth, aging donated hardware, many languages, and routine
 cyclone/tsunami/earthquake exposure.
 
+**Website & docs:** https://venupacific.org · **Download:**
+https://venupacific.org/download/ (first release in final testing)
+
 ## Base
 
 - Debian 13 (trixie) stable
@@ -16,7 +19,7 @@ cyclone/tsunami/earthquake exposure.
 ```
 config/          live-build configuration (Phase 1)
 branding/         logo, wallpapers, boot splash, icon theme (Phase 1)
-locales/          gettext translation catalogs — en, bi (Phase 2)
+locales/          gettext translation catalogs — en, bi, fj (Phase 2)
 welcome-app/     first-run language picker / setup (Phase 1)
 disaster-info/    offline cyclone/tsunami/earthquake safety info (Phase 2)
 services-directory/ offline government/health/education directory (Phase 2)
