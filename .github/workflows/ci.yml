@@ -41,7 +41,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             live-build ca-certificates file \
-            build-essential debhelper gettext
+            build-essential debhelper gettext apt-file
 
       # Everything Venu Pacific-specific reaches the image as a real .deb,
       # not as loose files copied in. That is what lets an installed machine
@@ -49,6 +49,15 @@ jobs:
       # keyring built here points apt at venupacific.org's own repository.
       - name: Build the Venu Pacific packages
         run: ./scripts/build-debs.sh
+
+      # Runs BEFORE lb build on purpose. A path owned by two packages makes
+      # dpkg refuse the unpack, which used to surface twenty minutes into
+      # `lb build` with the error buried in the unpack log. This answers the
+      # same question in about a minute.
+      - name: Check for file-ownership conflicts with Debian packages
+        run: |
+          apt-file update
+          ./scripts/check-file-conflicts.sh
 
       # live-build turns config/config/packages.chroot into a local apt
       # repository, so venu-pacific-desktop (named in the package list)

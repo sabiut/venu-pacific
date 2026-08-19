@@ -154,8 +154,13 @@ override_dh_auto_install:
 	    $(SETTINGS)/usr/lib/systemd/user/venu-pacific-notify-updates.service
 	install -D -m 0644 system/systemd/user/venu-pacific-notify-updates.timer \
 	    $(SETTINGS)/usr/lib/systemd/user/venu-pacific-notify-updates.timer
-	install -D -m 0644 system/autostart/light-locker.desktop \
-	    $(SETTINGS)/etc/xdg/autostart/light-locker.desktop
+	# Our screen-locker autostart entry, under OUR name. light-locker's own
+	# entry is neutralised by a diversion in the preinst rather than
+	# overwritten: shipping a file at light-locker's path made dpkg treat
+	# it as a contested conffile and stop to ask the admin which copy to
+	# keep -- a prompt no unattended image build can answer.
+	install -D -m 0644 system/autostart/venu-pacific-screen-locker.desktop \
+	    $(SETTINGS)/etc/xdg/autostart/venu-pacific-screen-locker.desktop
 	install -D -m 0644 system/autostart/venu-pacific-set-defaults.desktop \
 	    $(SETTINGS)/etc/xdg/autostart/venu-pacific-set-defaults.desktop
 	install -D -m 0644 system/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml \

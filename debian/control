@@ -101,7 +101,8 @@ Description: Venu Pacific offline AI assistant
 
 Package: venu-pacific-settings
 Architecture: all
-Depends: ${misc:Depends}
+Depends: light-locker,
+         ${misc:Depends}
 Recommends: libnotify-bin,
             synaptic,
 Description: Venu Pacific system defaults and update notifier
@@ -114,6 +115,12 @@ Description: Venu Pacific system defaults and update notifier
  Neither half ever fetches or installs a package. Bandwidth here is often
  capped or metered, so applying updates stays a deliberate choice made in
  Synaptic.
+ .
+ Depends on light-locker because it takes over that package's autostart
+ entry through a dpkg diversion, substituting a guard that decides whether
+ locking is appropriate on this hardware. Diverting a file belonging to a
+ package that may not be installed would leave the system with no screen
+ locker autostart at all.
 
 Package: venu-pacific-desktop
 Architecture: all
