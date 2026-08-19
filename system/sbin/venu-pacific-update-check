@@ -12,7 +12,20 @@ set -e
 STATE_DIR=/var/lib/venu-pacific
 mkdir -p "$STATE_DIR"
 
-apt-get update -qq
+# apt-get update fails as a whole if ANY configured source is unreachable,
+# and this machine now has two: Debian's and Venu Pacific's own. On the
+# connections this distro exists to serve, one of them being unreachable is
+# routine rather than exceptional -- and with `set -e` above, that would
+# abort this script and leave update-count stale. The user would then stop
+# being told about Debian SECURITY updates because venupacific.org happened
+# to be down, which is a far worse failure than missing our own.
+#
+# So: tolerate the error, and count from whatever the refreshed lists do
+# contain. apt still updates every source it can reach.
+if ! apt-get update -qq; then
+    echo "venu-pacific-update-check: some apt sources could not be refreshed;" \
+         "counting from the lists available" >&2
+fi
 
 count=$(apt list --upgradable 2>/dev/null | grep -c '/' || true)
 echo "$count" > "$STATE_DIR/update-count"

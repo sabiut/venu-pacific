@@ -33,7 +33,14 @@ INSTALL_DIR="/opt/venu-pacific/llama.cpp"
 MODEL_DIR="/usr/share/venu-pacific/models"
 
 echo "=== Installing build dependencies ==="
-apt-get update -qq
+# Tolerated deliberately. The image now installs venu-pacific-archive-keyring,
+# which registers download.venupacific.org as an apt source -- so a bare
+# `apt-get update` makes every ISO build depend on that host being up, and it
+# fails outright before the archive has ever been published. A distro that
+# cannot build itself when its own website is down is not one to ship from
+# the Pacific. The apt-get install below still fails loudly if the refresh
+# left us without the packages it needs.
+apt-get update -qq || echo "WARNING: some apt sources could not be refreshed; continuing"
 apt-get install -y -qq --no-install-recommends cmake build-essential git libssl-dev patchelf
 
 echo "=== Cloning llama.cpp (ggml-org/llama.cpp, canonical repo) ==="
