@@ -1,0 +1,135 @@
+Source: venu-pacific
+Section: misc
+Priority: optional
+Maintainer: sum abiut <suabiut@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               gettext,
+Standards-Version: 4.7.0
+Homepage: https://venupacific.org
+Rules-Requires-Root: no
+
+Package: venu-pacific-archive-keyring
+Architecture: all
+Depends: ${misc:Depends}
+Description: Venu Pacific APT archive keyring and source list
+ Installs the OpenPGP public key that signs the Venu Pacific package archive,
+ plus the deb822 source entry that points apt at it.
+ .
+ This is the package that makes "apt update" see Venu Pacific's own releases.
+ Without it an installed system only ever talks to the Debian archive, and
+ updates to the apps, branding and emergency content below never arrive.
+
+Package: venu-pacific-branding
+Architecture: all
+Depends: desktop-base,
+         plymouth,
+         ${misc:Depends}
+Description: Venu Pacific visual identity
+ Wallpapers, the Plymouth boot theme, the application/login pixmap and the
+ Calamares installer branding for Venu Pacific.
+ .
+ Registers the default desktop background through update-alternatives and
+ selects the Plymouth theme, so the look follows the package rather than
+ being baked into the image.
+ .
+ plymouth and desktop-base are hard dependencies rather than the Recommends
+ they might look like, because dpkg only guarantees configuration order for
+ Depends. As Recommends they were configured AFTER this package in a single
+ apt transaction, and the postinst's plymouth-set-default-theme call against
+ a half-configured plymouth left plymouth itself stuck at "unpacked" -- which
+ is exactly what a fresh image build is.
+
+Package: venu-pacific-content
+Architecture: all
+Depends: ${misc:Depends}
+Description: Offline disaster-readiness and services reference data
+ The JSON data behind the Disaster Readiness and Services Directory apps:
+ cyclone, tsunami and earthquake guidance, and the government, health and
+ education contact directory, for Vanuatu and Fiji.
+ .
+ Split into its own package deliberately. It is the part most likely to need
+ correcting between releases and the part where being wrong matters most, and
+ at a few hundred kilobytes it can be updated over a metered connection that
+ could never carry a new image.
+
+Package: venu-pacific-l10n
+Architecture: all
+Depends: ${misc:Depends}
+Description: Translations for Venu Pacific
+ Compiled gettext catalogs for the Venu Pacific applications. Currently
+ Bislama (bi) and Fijian (fj); English needs no catalog.
+
+Package: venu-pacific-apps
+Architecture: all
+Depends: gir1.2-gtk-3.0,
+         python3,
+         python3-gi,
+         venu-pacific-content (= ${binary:Version}),
+         zenity,
+         ${misc:Depends}
+Recommends: venu-pacific-l10n (= ${binary:Version}),
+Suggests: kiwix,
+Description: Venu Pacific desktop applications
+ The GTK applications that make up the Venu Pacific desktop:
+ .
+  * Welcome - first-run language picker and setup
+  * Hub - the launcher that ties the others together
+  * Disaster Readiness - offline cyclone/tsunami/earthquake guidance
+  * Services Directory - offline government/health/education contacts
+  * Help & Feedback, and the offline-content download guide
+
+Package: venu-pacific-assistant
+Architecture: all
+Depends: cups-client,
+         gir1.2-gtk-3.0,
+         gir1.2-wnck-3.0,
+         poppler-utils,
+         python3,
+         python3-bs4,
+         python3-gi,
+         ${misc:Depends}
+Recommends: kiwix-tools,
+            zim-tools,
+Description: Venu Pacific offline AI assistant
+ A local, offline assistant that answers questions against the bundled
+ offline encyclopedias and documents on disk. Talks to the llama.cpp server
+ shipped in the image at /opt/venu-pacific/llama.cpp.
+ .
+ Separate from venu-pacific-apps because of its dependency weight: it pulls
+ in the window-manager, PDF and ZIM-search tooling the other apps do not
+ need, and it is the one component worth removing on the lowest-end hardware.
+
+Package: venu-pacific-settings
+Architecture: all
+Depends: ${misc:Depends}
+Recommends: libnotify-bin,
+            synaptic,
+Description: Venu Pacific system defaults and update notifier
+ Default XFCE settings for new accounts, the login/console branding, the
+ screen-locker guard, and the two-part update notification system: a daily
+ off-peak root timer that refreshes apt's index and records the upgradable
+ count, and a per-user timer that turns that count into a desktop
+ notification.
+ .
+ Neither half ever fetches or installs a package. Bandwidth here is often
+ capped or metered, so applying updates stays a deliberate choice made in
+ Synaptic.
+
+Package: venu-pacific-desktop
+Architecture: all
+Depends: venu-pacific-apps (= ${binary:Version}),
+         venu-pacific-archive-keyring (= ${binary:Version}),
+         venu-pacific-branding (= ${binary:Version}),
+         venu-pacific-content (= ${binary:Version}),
+         venu-pacific-l10n (= ${binary:Version}),
+         venu-pacific-settings (= ${binary:Version}),
+         ${misc:Depends}
+Recommends: venu-pacific-assistant (= ${binary:Version}),
+Description: Venu Pacific desktop (metapackage)
+ Depends on everything that makes an installed system a Venu Pacific system.
+ Installing this package pulls the whole set; upgrading it carries the whole
+ set forward.
+ .
+ This package also carries the release version: /etc/venu-pacific-release and
+ the VENU_PACIFIC_VERSION field in /etc/os-release are derived from it, so
+ there is exactly one place a release number is defined - debian/changelog.

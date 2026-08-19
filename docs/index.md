@@ -39,6 +39,9 @@ First-run language choice: English, Bislama, or Fijian.
 - [Download & verify](download.md) — where to get the ISO and how to check it
 - [Install guide](install-guide.md) — writing a USB stick, booting, installing —
   including a [video walkthrough](install-guide.md) of the whole process
+- [Getting updates](updates.md) — installed machines receive fixes through
+  `apt` in kilobytes, not by downloading a new 4.7GB image, and never
+  without you choosing to
 
 ## For contributors
 

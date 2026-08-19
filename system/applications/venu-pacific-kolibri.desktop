@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Learn
+GenericName=Offline courses and learning materials
+Comment=Offline education platform. Courses, curricula and learning materials, no internet required
+Exec=/usr/bin/venu-pacific-kolibri
+Icon=venu-pacific
+Terminal=false
+Categories=Education;
+Keywords=learn;education;course;curriculum;school;kolibri;

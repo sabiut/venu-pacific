@@ -124,11 +124,36 @@ Tools — approval dialogs must appear for every gated one:
 - [ ] **Synaptic**: launches and can search a package (apt works post-install)
 - [ ] Update notification timer exists (`systemctl --user list-timers | grep venu`)
 - [ ] **Help & Feedback** page opens (menu or Hub tile), shows the real version number (not
-      `@VENU_VERSION@` — that placeholder surviving means the 0190 hook didn't run), and the
-      report-a-problem email/URL are correct
-- [ ] Version stamp: `cat /etc/venu-pacific-release` prints version + build date, and
-      `grep PRETTY_NAME /etc/os-release` says "Venu Pacific 26.08 (based on Debian 13)"
+      `@VENU_VERSION@` — that placeholder surviving means `debian/rules` did not substitute
+      it), and the report-a-problem email/URL are correct
+- [ ] Version stamp: `cat /etc/venu-pacific-release` prints the version, and
+      `grep PRETTY_NAME /etc/os-release` says "Venu Pacific 26.08 (Debian 13/trixie base)"
       while `ID=debian` is untouched (compatibility)
+
+## 6a. The update channel
+
+This is the difference between a release that can be fixed and one that can only be replaced.
+Everything here runs on the **installed** system, not the live session.
+
+- [ ] Every Venu Pacific file is owned by a package, not loose on disk:
+      `dpkg -S /usr/bin/venu-pacific-hub` names `venu-pacific-apps` rather than reporting no
+      path found. (No path found means it was copied in and can never be upgraded.)
+- [ ] `dpkg -l | grep venu-pacific` lists all eight packages as `ii` — **not `iU` or `iF`**.
+      A package stuck unpacked means a postinst failed during the image build.
+- [ ] `apt policy` lists `download.venupacific.org` alongside `deb.debian.org`
+- [ ] `sudo apt update` completes with **no** `NO_PUBKEY`, signature or hash-mismatch error —
+      that is the archive key and the deb822 `Signed-By:` entry working end to end
+- [ ] `apt policy venu-pacific-desktop` shows the installed version and the archive as a
+      candidate source
+- [ ] Publish a throwaway point release to the archive, then on this machine:
+      `sudo apt update && apt list --upgradable` lists the Venu Pacific packages, and
+      `sudo apt upgrade` completes cleanly. **This is the one check that proves a fix can
+      actually reach a user**, and nothing else substitutes for it.
+- [ ] After that upgrade, `cat /etc/venu-pacific-release` and `grep VENU_PACIFIC_VERSION
+      /etc/os-release` both show the NEW version — a stale version here means every field bug
+      report from this machine will name the wrong build
+- [ ] Nothing downloaded itself: the daily timer only refreshes the index. Confirm the
+      notification appeared and that no package was fetched without the user choosing it
 
 ## 7. Hardware reality (real machines only)
 

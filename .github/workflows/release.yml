@@ -1,0 +1,130 @@
+name: Release
+
+# Publishes the apt archive that installed machines upgrade from.
+#
+# Runs on a version tag (v26.08, v26.08.1, ...) and always builds the
+# packages. Whether it also *publishes* them depends on whether the signing
+# and R2 secrets are configured -- see "Publishing from CI" in
+# scripts/apt-repo/README.md for the trade-off. Without them the job still
+# produces the .debs as an artifact, and
+# ./scripts/apt-repo/publish.sh can push them from a maintainer's machine.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Upload to the live archive (otherwise build and sign only)'
+        type: boolean
+        default: false
+
+jobs:
+  packages:
+    name: Build and publish packages
+    runs-on: ubuntu-latest
+    # A real trixie container, not the ubuntu-latest host: these packages are
+    # built against Debian 13's debhelper and dpkg, and that is what every
+    # target machine runs.
+    container:
+      image: debian:trixie
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the packaging and archive toolchain
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential debhelper gettext \
+            gnupg apt-utils ca-certificates curl unzip
+
+      - name: Check the tag matches debian/changelog
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # A tag that disagrees with the changelog produces an archive
+          # advertising one version while the release notes claim another,
+          # and there is no way to fix it after users have fetched it.
+          tag_version="${GITHUB_REF_NAME#v}"
+          changelog_version="$(dpkg-parsechangelog -SVersion)"
+          if [ "$tag_version" != "$changelog_version" ]; then
+            echo "Tag $GITHUB_REF_NAME says $tag_version but debian/changelog says $changelog_version." >&2
+            echo "Bump debian/changelog and re-tag." >&2
+            exit 1
+          fi
+          echo "Version $changelog_version confirmed."
+
+      - name: Build the packages
+        run: ./scripts/build-debs.sh
+
+      - name: Upload the .deb artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: venu-pacific-debs
+          path: dist/*.deb
+          retention-days: 90
+
+      - name: Decide whether the archive can be published
+        id: gate
+        env:
+          SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+          R2_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        run: |
+          if [ -n "$SIGNING_KEY" ] && [ -n "$R2_KEY_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::APT_SIGNING_KEY / R2 secrets not configured -- built the packages but did not publish. Run ./scripts/apt-repo/publish.sh locally, or see scripts/apt-repo/README.md."
+          fi
+
+      - name: Install the AWS CLI (R2 speaks the S3 API)
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscli.zip
+          unzip -q /tmp/awscli.zip -d /tmp
+          /tmp/aws/install
+
+      - name: Import the archive signing key
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+          APT_SIGNING_PASSPHRASE: ${{ secrets.APT_SIGNING_PASSPHRASE }}
+        run: |
+          export GNUPGHOME="$(mktemp -d)"
+          chmod 700 "$GNUPGHOME"
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          printf '%s' "$APT_SIGNING_KEY" | gpg --batch --import
+          # Batch gpg cannot answer a passphrase prompt, so the passphrase is
+          # preloaded into the agent for this run only.
+          if [ -n "$APT_SIGNING_PASSPHRASE" ]; then
+            fpr="$(cat scripts/apt-repo/keys/KEYID)"
+            echo "allow-preset-passphrase" >> "$GNUPGHOME/gpg-agent.conf"
+            echo "pinentry-mode loopback" >> "$GNUPGHOME/gpg.conf"
+            gpg-connect-agent reloadagent /bye
+            keygrip="$(gpg --with-colons --with-keygrip --list-secret-keys "$fpr" \
+                       | awk -F: '/^grp:/ {print $10; exit}')"
+            /usr/lib/gnupg/gpg-preset-passphrase --preset "$keygrip" \
+              <<< "$APT_SIGNING_PASSPHRASE"
+          fi
+
+      - name: Publish the apt archive
+        if: steps.gate.outputs.ready == 'true' && (github.event_name == 'push' || inputs.publish)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_PROFILE: default
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        run: ./scripts/apt-repo/publish.sh
+
+      - name: Verify the published archive the way a user's apt will
+        if: steps.gate.outputs.ready == 'true' && (github.event_name == 'push' || inputs.publish)
+        run: |
+          # Fetching over the real public URL, not the bucket: this is the
+          # only check that catches a Cloudflare cache or custom-domain
+          # misconfiguration, which looks fine from the publishing side and
+          # broken from every user's side.
+          curl -fsS https://download.venupacific.org/apt/dists/trixie/InRelease -o /tmp/InRelease
+          gpg --verify /tmp/InRelease
+          grep -q '^Origin: Venu Pacific' /tmp/InRelease
+          echo "Archive is live and its signature verifies."

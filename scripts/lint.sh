@@ -22,10 +22,10 @@ check_executable() {
     fi
 }
 
-# Dispatches on the shebang's interpreter rather than assuming shell —
-# includes.chroot/usr/local also holds Python scripts (the welcome app),
-# and running `sh -n` against those would be a false-positive syntax
-# failure, not a real one.
+# Dispatches on the shebang's interpreter rather than assuming shell — the
+# app directories hold Python scripts (the welcome app and friends) next to
+# the shell ones in system/, and running `sh -n` against those would be a
+# false-positive syntax failure, not a real one.
 check_script() {
     local f="$1"
     local shebang
@@ -35,8 +35,8 @@ check_script() {
         '#!'*python*)
             # Deliberately not `python3 -m py_compile` — it writes a
             # __pycache__ dir next to the file regardless of
-            # PYTHONDONTWRITEBYTECODE, which under includes.chroot/ would
-            # ship into the built image. compile() in memory has no such
+            # PYTHONDONTWRITEBYTECODE, and those .pyc files would then be
+            # picked up by the packaging. compile() in memory has no such
             # side effect.
             if ! python3 -c "
 import sys
@@ -72,15 +72,36 @@ while IFS= read -r -d '' f; do
     check_script "$f"
 done < <(find config/config/hooks -type f \( -name "*.hook.chroot" -o -name "*.hook.binary" \) -print0 2>/dev/null)
 
-echo "== includes.chroot scripts (usr/local) =="
+echo "== packaged programs (app directories + system/) =="
 while IFS= read -r -d '' f; do
     if head -c2 "$f" 2>/dev/null | grep -q '^#!'; then
         check_script "$f"
     fi
-done < <(find config/config/includes.chroot/usr/local -type f -print0 2>/dev/null)
+done < <(find ai-assistant disaster-info hub services-directory welcome-app \
+              system/bin system/sbin scripts scripts/apt-repo scripts/moet-pack \
+              -maxdepth 1 -type f -print0 2>/dev/null)
+
+# Nothing shipped may still point at /usr/local. Debian policy reserves it
+# for the local administrator: a package cannot own a file there, which
+# means anything installed to /usr/local can never be upgraded by apt —
+# the exact failure this packaging exists to fix. Everything now installs to
+# /usr/bin and /usr/sbin; this catches a reference sneaking back in.
+echo "== no /usr/local references in packaged files =="
+while IFS= read -r -d '' f; do
+    if grep -qs '/usr/local/s\?bin' "$f"; then
+        echo "FAIL: $f references /usr/local (packages must install to /usr)" | tee -a "$FAIL_LOG"
+    fi
+done < <(find ai-assistant disaster-info hub kiwix-content services-directory \
+              welcome-app system -type f -not -path "*/__pycache__/*" \
+              \( -name "*.desktop" -o -name "*.service" -o -name "*.timer" \
+                 -o -name "venu-pacific-*" \) -print0 2>/dev/null)
 
 echo "== systemd unit files =="
+if ! command -v systemd-analyze >/dev/null 2>&1; then
+    echo "NOTE: systemd-analyze not installed, skipping unit validation"
+fi
 while IFS= read -r -d '' f; do
+    command -v systemd-analyze >/dev/null 2>&1 || break
     output="$(systemd-analyze verify "$f" 2>&1)" || true
     # ExecStart targets don't exist on the lint host (they're only present
     # in the built rootfs) — that's expected, not a real failure. Anything
@@ -90,14 +111,14 @@ while IFS= read -r -d '' f; do
         echo "FAIL: $f" | tee -a "$FAIL_LOG"
         echo "$real_errors" | tee -a "$FAIL_LOG"
     fi
-done < <(find config/config/includes.chroot -type f \( -name "*.service" -o -name "*.timer" \) -print0 2>/dev/null)
+done < <(find system/systemd -type f \( -name "*.service" -o -name "*.timer" \) -print0 2>/dev/null)
 
 echo "== XML files =="
 while IFS= read -r -d '' f; do
     if ! python3 -c "import xml.dom.minidom as m; m.parse('$f')" >/dev/null 2>&1; then
         echo "FAIL: $f is not valid XML" | tee -a "$FAIL_LOG"
     fi
-done < <(find config/config/includes.chroot -name "*.xml" -print0 2>/dev/null)
+done < <(find system -name "*.xml" -print0 2>/dev/null)
 
 echo "== SVG files (config/config/bootloaders/, branding/) =="
 while IFS= read -r -d '' f; do
@@ -114,11 +135,41 @@ while IFS= read -r -d '' f; do
 done < <(find disaster-info services-directory -name "*.json" -print0 2>/dev/null)
 
 echo "== gettext catalogs (locales/) =="
-while IFS= read -r -d '' f; do
-    if ! msgfmt --check -o /dev/null "$f" 2>&1; then
-        echo "FAIL: $f failed msgfmt --check" | tee -a "$FAIL_LOG"
+# Tool-absence is not a lint failure. This project is maintained from an
+# account that cannot install packages, so a check that reports FAIL when
+# its own tool is missing trains everyone to ignore the output -- and the
+# real failures with it. CI installs gettext, so the catalogs are still
+# genuinely checked before anything ships.
+if command -v msgfmt >/dev/null 2>&1; then
+    while IFS= read -r -d '' f; do
+        if ! msgfmt --check -o /dev/null "$f" 2>&1; then
+            echo "FAIL: $f failed msgfmt --check" | tee -a "$FAIL_LOG"
+        fi
+    done < <(find locales -type f \( -name "*.po" -o -name "*.pot" \) -print0 2>/dev/null)
+else
+    echo "NOTE: msgfmt not installed (gettext), skipping catalog validation"
+fi
+
+echo "== Debian packaging metadata =="
+# dpkg-parsechangelog is the cheapest thing that reads debian/changelog and
+# debian/control the way the real build will, so a typo in either fails the
+# lint job in seconds instead of 90 minutes into an ISO build.
+if command -v dpkg-parsechangelog >/dev/null 2>&1; then
+    if ! dpkg-parsechangelog -l debian/changelog >/dev/null 2>&1; then
+        echo "FAIL: debian/changelog is not parseable" | tee -a "$FAIL_LOG"
     fi
-done < <(find locales -type f \( -name "*.po" -o -name "*.pot" \) -print0 2>/dev/null)
+else
+    echo "NOTE: dpkg-parsechangelog not available, skipping changelog check"
+fi
+
+# The keyring package is what points an installed machine at the archive.
+# Building it without the archive's public key would produce a keyring that
+# trusts nothing, and apt would reject every Venu Pacific package on every
+# user's machine at once.
+if [ ! -f scripts/apt-repo/keys/venu-pacific-archive-keyring.gpg ]; then
+    echo "NOTE: no archive signing key yet (scripts/apt-repo/make-key.sh)."
+    echo "      .deb builds will fail until it exists; see scripts/apt-repo/README.md"
+fi
 
 echo
 if [ -s "$FAIL_LOG" ]; then

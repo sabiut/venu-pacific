@@ -110,3 +110,14 @@ qemu-guest-agent
 # Debian's own repos, so including it means adding a third-party apt archive
 # (config/archives/) and trusting its signing key. Revisit once we decide
 # whether that's worth the added dependency, or ship python3-idle instead.
+
+# Venu Pacific's own packages, built by scripts/build-debs.sh into
+# config/config/packages.chroot/ — live-build turns that directory into a
+# local apt repository, so naming the metapackage here installs the whole
+# set with proper dependency resolution rather than a bare `dpkg -i`.
+#
+# This is also what makes updates work after installation: everything here
+# is dpkg-owned and carries the archive keyring, so `apt update` on a user's
+# machine sees venupacific.org's own archive alongside Debian's, and
+# `apt upgrade` can carry these packages forward without a new 4.7GB image.
+venu-pacific-desktop

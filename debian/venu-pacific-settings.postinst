@@ -1,0 +1,57 @@
+#!/bin/sh
+# Installs the console/SSH login banners.
+#
+# /etc/issue and /etc/issue.net are conffiles belonging to base-files, so
+# they cannot be shipped as files in this package -- dpkg refuses to let two
+# packages own the same path. They are installed here from templates
+# instead, with the stock banner kept and restored on purge.
+set -e
+
+STATE_DIR=/var/lib/venu-pacific
+
+install_banner() {
+    template="$1"
+    target="$2"
+    backup="$3"
+    stamp="$STATE_DIR/$(basename "$target").stamp"
+
+    [ -f "$template" ] || return 0
+
+    # Already exactly what we want -- nothing to do, and in particular no
+    # reason to take a backup of our own banner.
+    if [ -f "$target" ] && cmp -s "$template" "$target"; then
+        cp "$template" "$stamp"
+        return 0
+    fi
+
+    # First time through: keep whatever base-files put there, so purge can
+    # put it back.
+    if [ ! -e "$backup" ] && [ -f "$target" ]; then
+        cp -a "$target" "$backup"
+    fi
+
+    # If the file on disk is not the banner we last wrote, someone (the
+    # admin, or a base-files upgrade) changed it deliberately. Leave it
+    # alone rather than silently reverting their edit.
+    if [ -f "$target" ] && [ -f "$stamp" ] && ! cmp -s "$stamp" "$target"; then
+        return 0
+    fi
+
+    cp "$template" "$target"
+    chmod 0644 "$target"
+    cp "$template" "$stamp"
+}
+
+case "$1" in
+    configure)
+        mkdir -p "$STATE_DIR"
+        install_banner /usr/share/venu-pacific/issue \
+            /etc/issue /etc/issue.venu-pacific-orig
+        install_banner /usr/share/venu-pacific/issue.net \
+            /etc/issue.net /etc/issue.net.venu-pacific-orig
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

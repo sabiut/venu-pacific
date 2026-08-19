@@ -1,6 +1,0 @@
-[Unit]
-Description=Venu Pacific — notify about available updates
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/venu-pacific-notify-updates

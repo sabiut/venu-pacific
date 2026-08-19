@@ -13,8 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure systemd-analyze and msgfmt are available
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends systemd gettext
+      - name: Ensure systemd-analyze, msgfmt and dpkg-dev are available
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends systemd gettext dpkg-dev
 
       - name: Run lint checks
         run: ./scripts/lint.sh
@@ -36,13 +36,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install live-build
+      - name: Install live-build and the Debian packaging toolchain
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends live-build ca-certificates file
+          apt-get install -y --no-install-recommends \
+            live-build ca-certificates file \
+            build-essential debhelper gettext
 
-      - name: Sync translation catalogs into includes.chroot
-        run: ./scripts/sync-locales.sh
+      # Everything Venu Pacific-specific reaches the image as a real .deb,
+      # not as loose files copied in. That is what lets an installed machine
+      # upgrade through `apt` later: dpkg owns the files, and the archive
+      # keyring built here points apt at venupacific.org's own repository.
+      - name: Build the Venu Pacific packages
+        run: ./scripts/build-debs.sh
+
+      # live-build turns config/config/packages.chroot into a local apt
+      # repository, so venu-pacific-desktop (named in the package list)
+      # installs with full dependency resolution.
+      - name: Stage the packages for live-build
+        run: cp dist/*.deb config/config/packages.chroot/
 
       - name: lb config
         working-directory: config
@@ -70,3 +82,13 @@ jobs:
           name: venu-pacific-iso
           path: config/live-image-amd64.hybrid.iso
           retention-days: 7
+
+      # Kept separately from the ISO: these are what a release publishes to
+      # the apt archive, and they are small enough to keep around far longer
+      # than a 4.7GB image.
+      - name: Upload the .deb artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: venu-pacific-debs
+          path: dist/*.deb
+          retention-days: 30

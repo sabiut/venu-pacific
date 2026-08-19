@@ -1,8 +1,0 @@
-#!/bin/sh
-# Activates the Venu Pacific Plymouth theme and rebuilds the initramfs so it
-# takes effect in the image live-build assembles. Runs inside the chroot
-# during `lb build`.
-
-set -e
-
-plymouth-set-default-theme venu-pacific --rebuild-initrd

@@ -74,6 +74,11 @@ without CloudFront and a hard billing alarm.
 
 ### 1a. Cloudflare R2 setup (recommended controllable option)
 
+**The account id** for `--endpoint-url` is recorded in `scripts/apt-repo/r2.env`
+(gitignored). On a fresh clone, copy `scripts/apt-repo/r2.env.example` and fill it in from
+Cloudflare → R2 → the bucket → Settings → **S3 API**. Note it is *not* the hash in the
+`pub-<hash>.r2.dev` development URL below — different identifier, easily confused.
+
 **Provisioned 2026-07-30**: bucket `venu-pacific-releases`, location hint Asia-Pacific (APAC),
 bucket-scoped Object Read & Write API token created and CLI access verified. Public
 Development URL enabled 2026-08-05 (`https://pub-5c5e5d1fa33748e99ea39f47ec77d4a8.r2.dev`),
@@ -224,15 +229,70 @@ Versioning: `YY.MM` calendar versioning (e.g. `26.08`), matching how Ubuntu/Debi
 users already read distro versions, with `-rc1` suffixes for candidates. Point releases add a
 patch: `26.08.1`.
 
+**The version is defined in exactly one place: `debian/changelog`.** Bump it there and
+everything else follows — `/etc/venu-pacific-release`, `PRETTY_NAME` and
+`VENU_PACIFIC_VERSION` in `/etc/os-release`, the version on the Help & Feedback page, and the
+Calamares installer's title. There is nothing else to edit by hand, and nothing that can drift
+out of step.
+
 ```bash
 # from the repo root, on main, with the tree clean
+dch -v 26.08 --distribution trixie   # or edit debian/changelog directly
+git commit -am "Release 26.08"
 git tag -a v26.08 -m "Venu Pacific 26.08 — first public release"
-git push origin v26.08
+git push origin main v26.08
 ```
 
-Also update the version shown to users if it has drifted: `strings:` → `version` and
-`versionedName` in
-`config/config/includes.chroot/etc/calamares/branding/venu-pacific/branding.desc`.
+The tag and the changelog must agree. `.github/workflows/release.yml` checks this and refuses
+to publish if they do not — an archive advertising one version while the release notes claim
+another cannot be fixed after users have fetched it.
+
+## 3a. Publish the package archive
+
+This is what reaches machines that are **already installed** — see
+[updates.md](updates.md) and
+[scripts/apt-repo/README.md](https://github.com/sabiut/venu-pacific/blob/main/scripts/apt-repo/README.md).
+It matters more than the ISO for everyone past their first install, and it is the only channel
+that works at all over a metered connection: a corrected cyclone instruction is a few hundred
+kilobytes here versus 4.7GB as an image.
+
+```bash
+./scripts/build-debs.sh
+DRY_RUN=1 ./scripts/apt-repo/publish.sh          # build and sign, upload nothing
+./scripts/apt-repo/publish.sh                    # sign and upload
+```
+
+The R2 account id lives in `scripts/apt-repo/r2.env` (gitignored; copy
+`r2.env.example` on a new machine). It is deliberately not in the repo — it
+identifies the Cloudflare account — but it is also not in `~/.aws`, so
+without that file the only remaining copy is your shell history, which is a
+bad place to go looking for it mid-release.
+
+The archive is assembled with `apt-ftparchive` and signed with plain `gpg` —
+both already present on a Debian system, needing no root. `.deb` building
+needs `debhelper`, which does; on a machine without sudo, build them in a
+container and publish from the host, which also keeps the signing key off
+the container:
+
+```bash
+docker run --rm -v "$PWD":/src debian:trixie bash -c \
+  'apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+     build-essential debhelper gettext && cd /src && ./scripts/build-debs.sh'
+```
+
+Then verify over the public URL, not the bucket — that is the only check that catches a
+Cloudflare cache or custom-domain mistake, which looks fine from the publishing side and broken
+from every user's side:
+
+```bash
+curl -fsS https://download.venupacific.org/apt/dists/trixie/InRelease | gpg --verify
+```
+
+- [ ] The signing key exists and is backed up offline (`scripts/apt-repo/make-key.sh`, run once
+      ever — losing it means no installed machine can be sent an update again)
+- [ ] The archive's key fingerprint is published on venupacific.org so recipients can check it
+- [ ] `apt update && apt policy venu-pacific-desktop` on a real installed machine shows the new
+      version coming from download.venupacific.org
 
 ## 4. Checksums (never publish an ISO without these)
 
@@ -290,3 +350,5 @@ Cover, in plain language for a non-Linux audience:
 - [ ] `docs/install-guide.md` matches what users will actually download (filename, size)
 - [ ] Record in `ROADMAP.md` what shipped and what was deferred, so the next release starts from
       a truthful baseline
+- [ ] The package archive is live and an installed machine actually sees the new version (§3a) —
+      the ISO is only half a release now

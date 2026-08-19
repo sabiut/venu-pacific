@@ -1,0 +1,29 @@
+#!/bin/sh
+# Puts the stock base-files login banners back on purge. Only on purge --
+# a plain remove leaves them in place, matching how conffile-ish state is
+# normally treated.
+set -e
+
+restore_banner() {
+    target="$1"
+    backup="$2"
+
+    if [ -e "$backup" ]; then
+        mv "$backup" "$target"
+    fi
+}
+
+case "$1" in
+    purge)
+        restore_banner /etc/issue     /etc/issue.venu-pacific-orig
+        restore_banner /etc/issue.net /etc/issue.net.venu-pacific-orig
+        rm -f /var/lib/venu-pacific/issue.stamp \
+              /var/lib/venu-pacific/issue.net.stamp \
+              /var/lib/venu-pacific/update-count
+        rmdir --ignore-fail-on-non-empty /var/lib/venu-pacific 2>/dev/null || true
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

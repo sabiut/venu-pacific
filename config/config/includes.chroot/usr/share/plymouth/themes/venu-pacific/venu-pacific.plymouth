@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=Venu Pacific
-Description=Boot theme for Venu Pacific: ocean gradient, wayfinding star mark, progress bar
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/venu-pacific
-ScriptFile=/usr/share/plymouth/themes/venu-pacific/venu-pacific.script

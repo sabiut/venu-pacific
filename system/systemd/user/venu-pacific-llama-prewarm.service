@@ -1,0 +1,33 @@
+[Unit]
+Description=Venu Pacific AI assistant prompt prewarm
+# Never run for system accounts. Enabled via `systemctl --global enable`,
+# which applies to EVERY user's systemd instance -- including the lightdm
+# greeter user that runs the login screen. Observed failure this explains:
+# at boot the greeter's instance starts a llama-server first, binds port
+# 8149, and sits in uninterruptible disk I/O loading the 2.4GB model, so
+# the real user's instance fails "couldn't bind" through every retry at
+# login and (with the restart limit) ends permanently 'failed' -- while
+# the port later shows free with no process, because the greeter's copy
+# dies with its session. @system matches all system-range UIDs.
+ConditionUser=!@system
+# Runs once at login, after the model server unit: waits for the server
+# to finish loading, then evaluates the fixed system-prompt + tool-schema
+# prefix (~3,500 tokens, ~2 minutes on slow hardware) into its KV cache
+# in the background. Without this, the FIRST assistant reply after every
+# boot paid that cost while the user watched "Thinking..." -- confirmed
+# repeatedly in real sessions. With it, the cost is paid invisibly at
+# login, and the first reply only processes the user's own message.
+#
+# Type=simple (not oneshot) so login/session startup is never blocked
+# waiting the ~2 minutes this takes -- it just runs alongside.
+After=venu-pacific-llama.service
+Wants=venu-pacific-llama.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/venu-pacific-assistant --prewarm
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=default.target

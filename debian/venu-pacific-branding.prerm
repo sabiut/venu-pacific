@@ -1,0 +1,30 @@
+#!/bin/sh
+# Hand the desktop background back to whatever else claims it (normally
+# desktop-base) before this package's file disappears -- an alternative
+# pointing at a deleted path leaves the desktop with no background at all.
+set -e
+
+case "$1" in
+    remove|deconfigure)
+        # Unlike the postinst, these stay guarded: on removal the packages
+        # providing these tools may already be gone, and a prerm that fails
+        # blocks the removal it is supposed to be tidying up after.
+        if command -v update-alternatives >/dev/null 2>&1; then
+            update-alternatives --remove \
+                desktop-background \
+                /usr/share/backgrounds/venu-pacific/sunrise-volcano.png || true
+        fi
+
+        # Same for the boot splash: fall back to Debian's default theme
+        # rather than leaving plymouth pointed at files being removed.
+        if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+            if [ "$(plymouth-set-default-theme 2>/dev/null)" = "venu-pacific" ]; then
+                plymouth-set-default-theme -r -R || true
+            fi
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

@@ -2,7 +2,7 @@
 Type=Application
 Name=Welcome to Venu Pacific
 Comment=First-run orientation (runs once)
-Exec=/usr/local/bin/venu-pacific-welcome
+Exec=/usr/bin/venu-pacific-welcome
 Icon=venu-pacific
 OnlyShowIn=XFCE;
 NoDisplay=true

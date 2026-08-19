@@ -10,6 +10,9 @@ touches docs/.
   (the ISO itself is served from Cloudflare R2, not from this site)
 - [install-guide.md](install-guide.md) — writing the ISO to a USB drive,
   booting it, and installing to disk
+- [updates.md](updates.md) — how installed machines receive fixes through
+  `apt` from Venu Pacific's own signed package archive, what is in it, and
+  what still needs a new image
 - [releasing.md](releasing.md) — how to publish a release: distribution
   channel (the ISO is too large for GitHub Releases), R2 setup, versioning
   and tagging, checksums, release notes, and the "Venu" trademark

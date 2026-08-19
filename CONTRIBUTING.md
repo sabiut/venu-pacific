@@ -61,6 +61,28 @@ the same standard:
 3. Open a PR — ideally with review from someone who can verify against the
    original source or has local knowledge of the country in question.
 
+## How your change reaches a real machine
+
+Everything Venu Pacific-specific ships as a `.deb`, built from `debian/` by
+`scripts/build-debs.sh` and published to Venu Pacific's own signed apt
+archive. That is what lets a fix reach machines that are already installed,
+in kilobytes rather than as a new 4.7GB image — see
+[docs/updates.md](docs/updates.md).
+
+Two practical consequences for a PR:
+
+- **Nothing installs to `/usr/local`.** Debian policy reserves it for the
+  local administrator, and a package cannot own a file there — so anything
+  put there can never be upgraded by `apt`. Programs go to `/usr/bin` (or
+  `/usr/sbin`); `scripts/lint.sh` fails the build if a `/usr/local` path
+  reappears.
+- **New files need a home in `debian/rules`.** Adding a script, icon or data
+  file to one of the source directories does not ship it — say which package
+  installs it and where. `debian/control` explains what each package is for.
+
+A content fix (the JSON above) needs nothing beyond editing the file: it is
+already inside `venu-pacific-content`.
+
 ## Code changes
 
 - Keep the desktop XFCE-class in resource use — the target machine is an

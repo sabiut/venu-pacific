@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Venu Pacific defaults
-Comment=Applies default wallpaper on first login (runs once)
-Exec=/usr/local/bin/venu-pacific-set-defaults
-OnlyShowIn=XFCE;
-NoDisplay=true
-X-GNOME-Autostart-Phase=Application

@@ -1,0 +1,14 @@
+venu-pacific (26.08) trixie; urgency=medium
+
+  * First packaged release. Everything Venu Pacific-specific moves out of
+    live-build's includes.chroot and into real Debian packages, so an
+    installed system can receive updates through "apt update" instead of
+    only through a new 4.7GB image.
+  * New venu-pacific-archive-keyring: ships the archive signing key and the
+    apt source entry pointing at https://download.venupacific.org/apt.
+  * The release version is now defined once, here. /etc/venu-pacific-release,
+    the os-release fields, the Help page and the installer title all derive
+    from it, replacing the two live-build hooks that used to set it (and
+    disagreed with each other about PRETTY_NAME).
+
+ -- sum abiut <suabiut@gmail.com>  Wed, 19 Aug 2026 00:00:00 +0000

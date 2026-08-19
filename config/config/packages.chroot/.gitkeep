@@ -1,0 +1,4 @@
+Populated by scripts/build-debs.sh -- live-build builds a local apt
+repository from every .deb dropped in this directory, which is how
+venu-pacific-desktop and its dependencies get into the image. The .deb
+files themselves are build output and are not committed (see .gitignore).

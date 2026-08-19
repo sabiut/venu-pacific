@@ -1,8 +1,0 @@
-[Unit]
-Description=Venu Pacific — check for available updates
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/venu-pacific-update-check

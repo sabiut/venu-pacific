@@ -27,12 +27,24 @@ Either download a released ISO (see [Download & verify](download.md)), or build 
 from source:
 
 ```sh
-./scripts/sync-locales.sh
+./scripts/build-debs.sh
+cp dist/*.deb config/config/packages.chroot/
 cd config
 sudo lb clean
 lb config
 sudo lb build
 ```
+
+The first two commands build Venu Pacific's own `.deb` packages and stage them where
+live-build can find them. Everything Venu Pacific-specific — the apps, branding, translations
+and settings — reaches the image as real packages, which is what lets an installed machine
+receive updates through `apt` afterwards (see [Getting updates](updates.md)). You need
+`build-essential debhelper gettext` installed, and the archive signing key must exist
+(`./scripts/apt-repo/make-key.sh`, once).
+
+If you can't install `debhelper` (no sudo), use `./scripts/build-debs-in-docker.sh` instead of
+the first line — it runs the same build in a Debian trixie container and hands the output back
+to your own user.
 
 Run `lb config` **with no arguments** — every setting (distribution, archive areas, the
 "Venu Pacific" ISO volume label, no classic Debian Installer) is already committed in the

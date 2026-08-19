@@ -1,0 +1,23 @@
+# Venu Pacific's own package archive.
+#
+# This is the file that makes `apt update` see Venu Pacific releases. Without
+# it an installed machine only ever talks to the Debian archive, and updates
+# to the apps, branding and emergency reference content never arrive.
+#
+# deb822 format (not the one-line sources.list format) specifically for
+# Signed-By: it scopes the archive key to this one repository, so the Venu
+# Pacific key can never be used to vouch for a package claiming to come from
+# Debian. A key dropped in /etc/apt/trusted.gpg.d would be trusted for every
+# repository on the system, which is exactly the mistake this format exists
+# to prevent.
+#
+# Suites tracks the Debian base: a future Venu Pacific built on Debian 14
+# publishes into a "forky" suite, and machines still on trixie keep getting
+# trixie-compatible packages rather than silently jumping base.
+
+Types: deb
+URIs: https://download.venupacific.org/apt
+Suites: trixie
+Components: main
+Architectures: amd64
+Signed-By: /usr/share/keyrings/venu-pacific-archive-keyring.gpg
