@@ -43,14 +43,6 @@ First-run language choice: English, Bislama, or Fijian.
   `apt` in kilobytes, not by downloading a new 4.7GB image, and never
   without you choosing to
 
-## For contributors
-
-Venu Pacific is open source. Start with
-[CONTRIBUTING.md](https://github.com/sabiut/venu-pacific/blob/main/CONTRIBUTING.md)
-in the [source repository](https://github.com/sabiut/venu-pacific); the release
-process, test checklists, and research notes live in
-[docs/](https://github.com/sabiut/venu-pacific/tree/main/docs) there.
-
 ## Status
 
 Pre-release. The first release (26.08) is in final testing — a Vanuatu-first
