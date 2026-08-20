@@ -42,6 +42,21 @@ Get-FileHash venu-pacific-26.08-amd64.iso -Algorithm SHA256
 then compare the printed hash with the contents of the `.sha256` file. It
 must match exactly — if it doesn't, re-download.
 
+## The archive signing key
+
+Updates after installation come from Venu Pacific's own package archive, and
+every index it publishes is signed with this key:
+
+```
+Venu Pacific Archive Signing Key <archive@venupacific.org>
+37034C65 973FF8A0 99FEF888 C3911397 DCE079CB
+```
+
+You do not need to do anything with it — an installed system already carries
+it, and `apt` checks the signature on every update. It is published here so
+that the fingerprint on your machine can be checked against a source other
+than the machine itself. See [Getting updates](updates.md#the-archive-signing-key).
+
 ## Next step
 
 Once verified, follow the [install guide](install-guide.md) to write the ISO

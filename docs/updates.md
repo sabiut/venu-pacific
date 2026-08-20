@@ -63,11 +63,35 @@ in `/etc/apt/sources.list.d/venu-pacific.sources` binds it to this one
 archive with `Signed-By:` — so the Venu Pacific key can never vouch for
 something claiming to be from Debian.
 
-Check the fingerprint against the one published on venupacific.org:
+### The archive signing key
+
+This is the authoritative fingerprint. Everything Venu Pacific has ever
+published to the archive is signed with this key:
+
+```
+Venu Pacific Archive Signing Key <archive@venupacific.org>
+37034C65 973FF8A0 99FEF888 C3911397 DCE079CB
+```
+
+To check that the key on your machine is that key:
 
 ```bash
 gpg --show-keys /usr/share/keyrings/venu-pacific-archive-keyring.gpg
 ```
+
+The fingerprint it prints must match the one above, character for
+character. If it does not, stop and report it — a machine trusting the
+wrong key would accept packages Venu Pacific did not publish.
+
+Reading it from this page over HTTPS is a reasonable check, and it is the
+one most people can actually perform. It is not an absolute one: anyone who
+could serve you a tampered archive and a tampered copy of this page could
+show you a matching pair. Publishing the fingerprint in more than one place
+is what closes that gap, and is worth doing as the project grows.
+
+The key does not expire. That is deliberate — an expired archive key breaks
+`apt update` on every installed machine at once, with an error most people
+cannot act on, and these machines may go months between connections.
 
 ## For maintainers
 
