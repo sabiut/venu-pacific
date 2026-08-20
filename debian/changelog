@@ -1,3 +1,17 @@
+venu-pacific (26.08.1) trixie; urgency=medium
+
+  * No functional change to any package. 26.08 was published to the archive
+    while the update channel was being brought up, before the ISO had ever
+    been built successfully, so that version number is spent: a machine that
+    fetched it holds packages identical to these. Bumping rather than
+    reusing 26.08 keeps the rule that a version number means one exact set
+    of contents, which is the whole basis on which apt decides an upgrade is
+    available.
+  * The first image that ships to anyone will therefore carry 26.08.1, and
+    the archive is republished at the same version so the two agree.
+
+ -- sum abiut <suabiut@gmail.com>  Thu, 20 Aug 2026 18:23:38 +1100
+
 venu-pacific (26.08) trixie; urgency=medium
 
   * First packaged release. Everything Venu Pacific-specific moves out of
