@@ -1,3 +1,27 @@
+venu-pacific (26.08.2) trixie; urgency=medium
+
+  * venu-pacific-assistant: render maths and code properly. Pilot testing on
+    real hardware found that anything involving calculus or arithmetic came
+    out with "the signs all over the place" -- small local models reach for
+    LaTeX constantly, and the chat view was a plain GTK label, so \frac{}{},
+    x^{2}, \times and $...$ reached the user as literal backslashes and
+    braces. Code was worse: no monospace, no colour, no structure at all.
+  * LaTeX is now converted to the Unicode the user actually wanted -- proper
+    fractions, superscripts, subscripts, Greek letters, roots, and the
+    relation symbols. A paired $...$ is treated as a maths delimiter while a
+    lone "$48" stays money, so prices are not mangled.
+  * Fenced code blocks are lifted out before any of that runs (a backslash in
+    a code sample must never be read as LaTeX) and rendered monospace, syntax
+    coloured via Pygments, with a language tag and a copy button. Colours are
+    drawn from the app's own palette rather than a generic editor theme.
+  * SYSTEM_PROMPT now asks for fenced blocks with a language tag and plain
+    maths symbols. The renderer is the safety net for when the model ignores
+    that, which it often does; the prompt is still the cheaper fix.
+  * New dependency: python3-pygments. There is a reduced fallback covering
+    comments, strings and numbers if it is ever missing.
+
+ -- sum abiut <suabiut@gmail.com>  Sun, 23 Aug 2026 11:16:16 +1100
+
 venu-pacific (26.08.1) trixie; urgency=medium
 
   * No functional change to any package. 26.08 was published to the archive

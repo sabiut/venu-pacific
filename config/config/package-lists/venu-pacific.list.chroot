@@ -91,6 +91,12 @@ zenity
 gir1.2-wnck-3.0
 cups-client
 
+# Syntax colouring for code the AI assistant shows. Pure Python, ~4.5MB
+# installed. Pilot testing found coding answers arriving as undifferentiated
+# grey text, which for a machine meant to help someone learn to program is
+# close to useless.
+python3-pygments
+
 # Welcome app (welcome-app/venu-pacific-welcome) — GTK3 via PyGObject,
 # not GTK4: XFCE's own native apps here are still GTK3 (confirmed:
 # xfdesktop 4.20 reports "Built with GTK+ 3.24"), so this matches rather

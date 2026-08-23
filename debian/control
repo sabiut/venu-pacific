@@ -87,6 +87,7 @@ Depends: cups-client,
          python3,
          python3-bs4,
          python3-gi,
+         python3-pygments,
          ${misc:Depends}
 Recommends: kiwix-tools,
             zim-tools,
@@ -98,6 +99,12 @@ Description: Venu Pacific offline AI assistant
  Separate from venu-pacific-apps because of its dependency weight: it pulls
  in the window-manager, PDF and ZIM-search tooling the other apps do not
  need, and it is the one component worth removing on the lowest-end hardware.
+ .
+ python3-pygments provides syntax colouring for code the assistant shows.
+ It is a hard dependency rather than optional because a coding answer
+ rendered as flat grey text is the failure this package exists to avoid;
+ there is a reduced fallback if the import fails, but nothing should be
+ relying on it.
 
 Package: venu-pacific-settings
 Architecture: all

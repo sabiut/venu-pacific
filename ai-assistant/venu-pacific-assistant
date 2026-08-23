@@ -21,6 +21,7 @@ steps (see ROADMAP.md's Build staging list), not part of this pass.
 import datetime
 import fnmatch
 import gettext
+from html import escape as _escape_markup
 import glob
 import json
 import math
@@ -131,6 +132,29 @@ window { background-color: #16232b; }
     background-color: #24363f;
     color: #d7dee1;
 }
+.code-block {
+    background-color: #16232b;
+    border: 1px solid #2f4650;
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+.code-lang {
+    color: #6b7880;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+.code-copy {
+    background-image: none;
+    background-color: transparent;
+    border: none;
+    color: #6b7880;
+    font-size: 10px;
+    padding: 0 4px;
+    min-height: 0;
+}
+.code-copy:hover { color: #4fb6ad; }
+.code-text { font-family: monospace; font-size: 12px; }
 .message-thinking {
     background-color: #24363f;
     color: #6b7880;
@@ -624,9 +648,17 @@ SYSTEM_PROMPT = (
     "paragraph.\n\n"
     "For calculations and numbers, write them in plain text only, e.g. "
     "'48 × 3,750 = 180,000' -- never use LaTeX or markdown math notation "
-    "(no \\text{}, \\times, \\frac{}{}, or $...$ delimiters). The chat display "
-    "cannot render math typesetting, so LaTeX shows up as literal backslashes "
-    "and braces instead of a readable equation.\n\n"
+    "(no \\text{}, \\times, \\frac{}{}, or $...$ delimiters). Use the ordinary "
+    "symbols × ÷ ≤ ≥ ≠ ± √ π directly, write fractions as a/b, and write "
+    "powers as x^2 or x². The display converts common LaTeX back into these "
+    "symbols if you use it anyway, but the conversion cannot be perfect -- "
+    "writing it plainly the first time is always clearer.\n\n"
+    "When you show code, ALWAYS put it in a fenced block with the language "
+    "named, like ```python on the opening fence, and put nothing else inside "
+    "the fence. The display gives fenced blocks a monospace font, syntax "
+    "colouring and a copy button, none of which it can do for code left "
+    "loose in a sentence. Use single backticks for a short inline name like "
+    "`ls` or `add(1, 2)`. Never indent code as a substitute for a fence.\n\n"
     "Whenever you need to check something you can check (disk space, Wi-Fi, "
     "internet, printers, open windows, active window, the time, battery), "
     "call the matching tool in that same turn. Never say \"let me check\" or "
@@ -2006,31 +2038,305 @@ def _describe_gated_call(name, arguments):
     return describer(arguments) if describer else name
 
 
-def _strip_latex_artifacts(text):
-    """Small local models default to LaTeX math notation (\\text{...},
-    \\times, $...$ delimiters) surprisingly often, even for plain
-    arithmetic -- confirmed in practice on a simple word problem. The chat
-    display is a plain GTK label with no math typesetting, so this shows
-    up as literal backslash-and-brace source text instead of a readable
-    equation. SYSTEM_PROMPT asks the model not to do this; this is the
-    safety net for when it does anyway.
+_SUPERSCRIPT = {
+    "0": "\u2070", "1": "\u00b9", "2": "\u00b2", "3": "\u00b3", "4": "\u2074",
+    "5": "\u2075", "6": "\u2076", "7": "\u2077", "8": "\u2078", "9": "\u2079",
+    "+": "\u207a", "-": "\u207b", "\u2212": "\u207b", "=": "\u207c",
+    "(": "\u207d", ")": "\u207e",
+    "a": "\u1d43", "b": "\u1d47", "c": "\u1d9c", "d": "\u1d48", "e": "\u1d49",
+    "f": "\u1da0", "g": "\u1d4d", "h": "\u02b0", "i": "\u2071", "j": "\u02b2",
+    "k": "\u1d4f", "l": "\u02e1", "m": "\u1d50", "n": "\u207f", "o": "\u1d52",
+    "p": "\u1d56", "r": "\u02b3", "s": "\u02e2", "t": "\u1d57", "u": "\u1d58",
+    "v": "\u1d5b", "w": "\u02b7", "x": "\u02e3", "y": "\u02b8", "z": "\u1dbb",
+}
+_SUBSCRIPT = {
+    "0": "\u2080", "1": "\u2081", "2": "\u2082", "3": "\u2083", "4": "\u2084",
+    "5": "\u2085", "6": "\u2086", "7": "\u2087", "8": "\u2088", "9": "\u2089",
+    "+": "\u208a", "-": "\u208b", "\u2212": "\u208b", "=": "\u208c",
+    "(": "\u208d", ")": "\u208e",
+    "a": "\u2090", "e": "\u2091", "h": "\u2095", "i": "\u1d62", "j": "\u2c7c",
+    "k": "\u2096", "l": "\u2097", "m": "\u2098", "n": "\u2099", "o": "\u2092",
+    "p": "\u209a", "r": "\u1d63", "s": "\u209b", "t": "\u209c", "u": "\u1d64",
+    "v": "\u1d65", "x": "\u2093",
+}
 
-    Only strips "$" when it's immediately followed by whitespace ("$ 48"),
-    never when preceded by whitespace -- that first version briefly also
-    matched ordinary currency like "is $48" (a space before "$" is just
-    normal sentence spacing before a price, not a LaTeX tell; caught this
-    in testing before it shipped). "$ 48" is the reliable signal instead:
-    nobody writes a space *between* "$" and the number for real money. A
-    closing "$ 48 ... 48 $" delimiter is left alone if it isn't followed
-    by whitespace -- an imperfect but safe tradeoff, and the rarer case
-    now that the prompt fix handles this at the source.
+_LATEX_SYMBOLS = {
+    r"\times": "\u00d7", r"\cdot": "\u00b7", r"\div": "\u00f7",
+    r"\pm": "\u00b1", r"\mp": "\u2213",
+    r"\leq": "\u2264", r"\le": "\u2264", r"\geq": "\u2265", r"\ge": "\u2265",
+    r"\neq": "\u2260", r"\ne": "\u2260", r"\approx": "\u2248",
+    r"\equiv": "\u2261", r"\propto": "\u221d",
+    r"\infty": "\u221e", r"\sum": "\u2211", r"\prod": "\u220f",
+    r"\int": "\u222b", r"\partial": "\u2202", r"\nabla": "\u2207",
+    r"\rightarrow": "\u2192", r"\to": "\u2192", r"\Rightarrow": "\u21d2",
+    r"\leftarrow": "\u2190", r"\in": "\u2208", r"\notin": "\u2209",
+    r"\subset": "\u2282", r"\cup": "\u222a", r"\cap": "\u2229",
+    r"\forall": "\u2200", r"\exists": "\u2203", r"\therefore": "\u2234",
+    r"\circ": "\u2218", r"\prime": "\u2032",
+    r"\ldots": "\u2026", r"\dots": "\u2026", r"\cdots": "\u22ef",
+    r"\alpha": "\u03b1", r"\beta": "\u03b2", r"\gamma": "\u03b3",
+    r"\delta": "\u03b4", r"\epsilon": "\u03b5", r"\varepsilon": "\u03b5",
+    r"\zeta": "\u03b6", r"\eta": "\u03b7", r"\theta": "\u03b8",
+    r"\lambda": "\u03bb", r"\mu": "\u03bc", r"\nu": "\u03bd",
+    r"\xi": "\u03be", r"\pi": "\u03c0", r"\rho": "\u03c1",
+    r"\sigma": "\u03c3", r"\tau": "\u03c4", r"\phi": "\u03c6",
+    r"\chi": "\u03c7", r"\psi": "\u03c8", r"\omega": "\u03c9",
+    r"\Gamma": "\u0393", r"\Delta": "\u0394", r"\Theta": "\u0398",
+    r"\Lambda": "\u039b", r"\Pi": "\u03a0", r"\Sigma": "\u03a3",
+    r"\Phi": "\u03a6", r"\Omega": "\u03a9",
+}
+
+# A PAIRED $...$ is a math delimiter; a lone "$48" is money. Requiring a real
+# math tell between the pair means "it costs $5 and then $10 more" survives
+# untouched -- two dollar signs, but nothing between them that could be an
+# equation. The earlier version of this only handled "$ " followed by
+# whitespace, which left "$x^2$" showing its delimiters on screen.
+_MATH_TELL = re.compile(r"[\\^_{}=]|\b\d+\s*[+\u00d7\u00f7/*-]\s*\d+")
+_DOLLAR_PAIR = re.compile(r"\$\$?([^$\n]{1,80}?)\$\$?")
+
+
+def _to_script(body, table, prefix):
+    """Unicode super/subscript, but only when EVERY character has one.
+    Half-converted output (x\u00b2 followed by a plain "y" that had no
+    superscript form) reads worse than not converting at all, so this is all
+    or nothing, with an ASCII fallback that stays unambiguous."""
+    if body and all(ch in table for ch in body):
+        return "".join(table[ch] for ch in body)
+    return "{}({})".format(prefix, body) if len(body) > 1 else prefix + body
+
+
+def _strip_math_delimiters(text):
+    def repl(match):
+        inner = match.group(1)
+        if _MATH_TELL.search(inner) or (" " not in inner.strip() and len(inner) <= 14):
+            return inner
+        return match.group(0)
+    return _DOLLAR_PAIR.sub(repl, text)
+
+
+def _prettify_math(text):
+    """Turn the LaTeX small local models reach for into readable Unicode.
+
+    Confirmed in practice: asked anything numeric, the model emits
+    \\frac{1}{2}, x^{2}, \\times, $...$ and friends even when the prompt
+    asks for plain text. The chat view is a GTK label with no math
+    typesetting, so that used to reach the user as literal backslashes and
+    braces -- "the arithmetic signs are all over the place", as the pilot
+    testing put it.
+
+    Prompt-side discouragement stays (SYSTEM_PROMPT), because the cheapest
+    fix is the model not emitting it; this is what happens when it does
+    anyway, which is often.
     """
-    text = re.sub(r"\\text\{([^}]*)\}", r"\1", text)
-    text = text.replace(r"\times", "×").replace(r"\cdot", "×").replace(r"\div", "÷")
-    text = re.sub(r"\\\(|\\\)|\\\[|\\\]", "", text)
-    text = re.sub(r"\$(?=\s)", "", text)
+    text = _strip_math_delimiters(text)
+
+    # Presentation-only wrappers: unwrap, keep the contents.
+    text = re.sub(r"\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}",
+                  r"\1", text)
+    text = text.replace(r"\left", "").replace(r"\right", "")
+
+    def _fraction(match):
+        num, den = match.group(1).strip(), match.group(2).strip()
+        num = num if re.fullmatch(r"[\w.]+", num) else "({})".format(num)
+        # The denominator is parenthesised unless it is a single character:
+        # "(x+1)/2y" reads as ((x+1)/2)*y to anyone applying the precedence
+        # rules, and this is a machine for teaching them.
+        den = den if re.fullmatch(r"[\w.]", den) else "({})".format(den)
+        return "{}/{}".format(num, den)
+
+    for _ in range(3):                       # nested fractions
+        replaced = re.sub(r"\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}",
+                          _fraction, text)
+        if replaced == text:
+            break
+        text = replaced
+
+    text = re.sub(
+        r"\\sqrt\s*\{([^{}]*)\}",
+        lambda m: "\u221a" + (m.group(1) if re.fullmatch(r"[\w.]+", m.group(1))
+                          else "({})".format(m.group(1))),
+        text,
+    )
+
+    # Longest names first so \leq is not eaten by \le.
+    for name in sorted(_LATEX_SYMBOLS, key=len, reverse=True):
+        text = text.replace(name, _LATEX_SYMBOLS[name])
+
+    # Whatever \word is left is a function name written the LaTeX way
+    # (\sin, \cos, \log, \lim). Drop the backslash, keep the word.
+    text = re.sub(r"\\([A-Za-z]+)", r"\1", text)
+
+    text = re.sub(r"\^\{([^{}]+)\}",
+                  lambda m: _to_script(m.group(1), _SUPERSCRIPT, "^"), text)
+    text = re.sub(r"_\{([^{}]+)\}",
+                  lambda m: _to_script(m.group(1), _SUBSCRIPT, "_"), text)
+    text = re.sub(r"\^(-?\w)",
+                  lambda m: _to_script(m.group(1), _SUPERSCRIPT, "^"), text)
+    text = re.sub(r"_(-?\w)",
+                  lambda m: _to_script(m.group(1), _SUBSCRIPT, "_"), text)
+
+    text = re.sub(r"\\[(){}\[\]!,;]|\\quad|\\qquad", " ", text)
+    text = re.sub(r"\{([^{}]*)\}", r"\1", text)      # leftovers like 3{,}750
+    text = re.sub(r"(?<=[\d)])\s\*\s(?=[\d(])", " \u00d7 ", text)
     text = re.sub(r"[ \t]{2,}", " ", text)
     return text
+
+
+# Kept under the old name: several call sites and a docstring elsewhere refer
+# to it, and "strip artifacts" is still what it does -- just far more of them.
+_strip_latex_artifacts = _prettify_math
+
+
+# Syntax colours, chosen against the app's existing palette (window #16232b,
+# assistant bubble #24363f, body #d7dee1, teal accent #4fb6ad) rather than
+# imported from a generic editor theme, so code reads as part of this app.
+_CODE_COLOURS = {
+    "keyword":  ("#4fb6ad", True, False),
+    "builtin":  ("#7ec8c2", False, False),
+    "string":   ("#e0a35f", False, False),
+    "number":   ("#e07a5f", False, False),
+    "comment":  ("#6b7880", False, True),
+    "name":     ("#e9e3d6", False, False),
+    "function": ("#e9e3d6", True, False),
+    "operator": ("#a9b7bd", False, False),
+    "text":     ("#d7dee1", False, False),
+}
+
+_CODE_FENCE = re.compile(r"```[ \t]*([\w+#.-]*)[ \t]*\n(.*?)(?:```|\Z)", re.S)
+
+# Comments, strings and numbers in any language, for when Pygments is absent.
+# Deliberately does NOT try keywords: getting a keyword list wrong across
+# languages looks worse than colouring none of them.
+_CODE_FALLBACK = re.compile(
+    r"(?P<comment>\#[^\n]*|//[^\n]*|/\*.*?\*/|--[^\n]*)"
+    r"|(?P<string>\"\"\".*?\"\"\"|\'\'\'.*?\'\'\'"
+    r"|\"(?:\\.|[^\"\\\n])*\"|\'(?:\\.|[^\'\\\n])*\')"
+    r"|(?P<number>\b\d+(?:\.\d+)?\b)",
+    re.S,
+)
+
+
+def _code_span(kind, text):
+    colour, bold, italic = _CODE_COLOURS.get(kind, _CODE_COLOURS["text"])
+    body = _escape_markup(text)
+    if bold:
+        body = "<b>{}</b>".format(body)
+    if italic:
+        body = "<i>{}</i>".format(body)
+    return '<span foreground="{}">{}</span>'.format(colour, body)
+
+
+def _pygments_code_markup(code, language):
+    """Pango markup via Pygments. Raises if it cannot do better than plain
+    text, so the caller can fall back rather than render a flat grey block."""
+    from pygments import lex
+    from pygments.lexers import get_lexer_by_name, guess_lexer
+    from pygments.lexers.special import TextLexer
+    from pygments.token import Token
+
+    lexer = None
+    if language:
+        try:
+            lexer = get_lexer_by_name(language)
+        except Exception:
+            lexer = None
+    if lexer is None:
+        # guess_lexer is unreliable on short snippets and will happily hand
+        # back a TextLexer, which colours nothing at all -- the regex
+        # fallback finds more than that, so treat this as a failure.
+        guessed = guess_lexer(code)
+        if isinstance(guessed, TextLexer):
+            raise ValueError("no usable lexer")
+        lexer = guessed
+
+    def kind_of(token):
+        if token in Token.Comment:
+            return "comment"
+        if token in Token.String:
+            return "string"
+        if token in Token.Number:
+            return "number"
+        if token in Token.Keyword:
+            return "keyword"
+        if token in Token.Name.Builtin:
+            return "builtin"
+        if token in Token.Name.Function or token in Token.Name.Class:
+            return "function"
+        if token in Token.Operator or token in Token.Punctuation:
+            return "operator"
+        if token in Token.Name:
+            return "name"
+        return "text"
+
+    return "".join(_code_span(kind_of(t), v) for t, v in lex(code, lexer) if v)
+
+
+def _fallback_code_markup(code):
+    pieces, pos = [], 0
+    for match in _CODE_FALLBACK.finditer(code):
+        if match.start() > pos:
+            pieces.append(_code_span("text", code[pos:match.start()]))
+        pieces.append(_code_span(match.lastgroup, match.group()))
+        pos = match.end()
+    pieces.append(_code_span("text", code[pos:]))
+    return "".join(pieces)
+
+
+def _code_markup(code, language):
+    """Never raises: a formatting problem must not cost the user their
+    answer, so anything unexpected degrades to plain escaped text."""
+    try:
+        return _pygments_code_markup(code, language)
+    except Exception:
+        try:
+            return _fallback_code_markup(code)
+        except Exception:
+            return _code_span("text", code)
+
+
+def _split_message_blocks(text):
+    """Split a reply into ('prose', text) and ('code', language, source).
+
+    Code is lifted out BEFORE any math prettifying runs, so a backslash in a
+    code sample is never mistaken for LaTeX -- which would corrupt the very
+    answer the user asked for.
+    """
+    blocks, pos = [], 0
+    for match in _CODE_FENCE.finditer(text):
+        if match.start() > pos:
+            blocks.append(("prose", text[pos:match.start()]))
+        blocks.append(("code", match.group(1).lower(), match.group(2).rstrip("\n")))
+        pos = match.end()
+    if pos < len(text):
+        blocks.append(("prose", text[pos:]))
+    return [b for b in blocks if b[0] == "code" or b[1].strip()]
+
+
+# These run AFTER _wrap_message_text has inserted literal newlines, so both
+# must tolerate a single newline inside the span -- otherwise any bold or
+# inline code that happens to straddle a wrap point would reach the user as
+# raw asterisks and backticks. A blank line still ends the span, so an
+# unclosed "**" cannot swallow the rest of the reply.
+_INLINE_CODE = re.compile(r"`((?:[^`\n]|\n(?!\n))+?)`")
+_BOLD = re.compile(r"\*\*((?:[^*\n]|\n(?!\n))+?)\*\*")
+
+
+def _prose_markup(text):
+    """Escaped Pango markup for a prose block: inline `code` and **bold**
+    become real styling instead of reaching the user as punctuation.
+
+    Order matters. Math first (so the wrap counts characters the user will
+    actually see, not backslash commands), then the same literal-newline
+    wrapping the plain label always used, then escaping, then markup -- tags
+    must be added after escaping or they would be escaped themselves.
+    """
+    out = _escape_markup(_wrap_message_text(_prettify_math(text).strip()))
+    out = _BOLD.sub(r"<b>\1</b>", out)
+    out = _INLINE_CODE.sub(
+        lambda m: '<span font_family="monospace" foreground="#e9e3d6">{}</span>'.format(m.group(1)),
+        out,
+    )
+    return out
 
 
 def _accumulate_tool_call_deltas(tool_calls_state, deltas):
@@ -2908,6 +3214,97 @@ class AssistantWindow(Gtk.Window):
             self.retry_button.show()
         return False
 
+    def _build_code_block(self, code, language):
+        """A fenced code block: language tag, copy button, and the source in
+        a monospace label that scrolls sideways rather than wrapping.
+
+        Deliberately NOT wrapped. Every other message body is pre-wrapped
+        with literal newlines to stop the window growing (see _add_message),
+        but doing that to code would change the code -- a wrapped line is a
+        different program, and the user is likely to copy this straight into
+        an editor. Horizontal scrolling keeps it exact and still keeps the
+        window from being dragged wide by one long line.
+        """
+        frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        frame.get_style_context().add_class("code-block")
+
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        tag = Gtk.Label(label=(language or _("code")).upper(), xalign=0)
+        tag.get_style_context().add_class("code-lang")
+        header.pack_start(tag, False, False, 0)
+
+        copy_button = Gtk.Button(label=_("Copy"))
+        copy_button.get_style_context().add_class("code-copy")
+        copy_button.set_relief(Gtk.ReliefStyle.NONE)
+        # The raw source, never the marked-up version -- pasting Pango span
+        # tags into an editor would be worse than useless.
+        copy_button.connect("clicked", self._on_copy_code, code, copy_button)
+        header.pack_end(copy_button, False, False, 0)
+        frame.pack_start(header, False, False, 0)
+
+        label = Gtk.Label(xalign=0)
+        label.set_markup(_code_markup(code, language))
+        label.set_selectable(True)
+        # set_selectable turns can_focus on, and the first focusable widget
+        # in a newly shown container appears with all its text selected --
+        # a blue highlight across the reply the user has to click away.
+        # Mouse selection still works with focus off; keyboard traversal
+        # just skips the label, which is what we want anyway.
+        label.set_can_focus(False)
+        label.get_style_context().add_class("code-text")
+
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+        scroller.set_propagate_natural_height(True)
+        scroller.add(label)
+        frame.pack_start(scroller, False, False, 0)
+        return frame
+
+    def _on_copy_code(self, _button, code, button):
+        Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(code, -1)
+        # Confirm in the button itself: there is no toast/notification
+        # surface in this window, and silently copying gives the user no way
+        # to know it worked.
+        button.set_label(_("Copied"))
+        GLib.timeout_add(1500, lambda: (button.set_label(_("Copy")), False)[1])
+
+    def _render_message_body(self, text):
+        """The assistant's reply as a stack of prose and code blocks inside
+        one bubble. Returns the bubble widget.
+
+        A single Gtk.Label cannot do this: code needs a monospace font,
+        syntax colour and no wrapping, while prose needs the opposite. One
+        bubble containing several widgets keeps it looking like a single
+        message rather than a run of separate ones.
+        """
+        bubble = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        bubble.get_style_context().add_class("message-assistant")
+
+        blocks = _split_message_blocks(text)
+        if not blocks:
+            blocks = [("prose", text)]
+        for block in blocks:
+            if block[0] == "code":
+                bubble.pack_start(self._build_code_block(block[2], block[1]),
+                                  False, False, 0)
+                continue
+            markup = _prose_markup(block[1])
+            if not markup.strip():
+                continue
+            label = Gtk.Label(xalign=0)
+            # set_markup can raise on malformed markup; the reply matters
+            # more than the styling, so fall back to showing it plainly.
+            try:
+                label.set_markup(markup)
+            except Exception:
+                label.set_text(_wrap_message_text(_prettify_math(block[1])))
+            label.set_selectable(True)
+            label.set_can_focus(False)   # see _build_code_block
+            label.set_line_wrap(True)
+            label.set_line_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+            bubble.pack_start(label, False, False, 0)
+        return bubble
+
     def _add_message(self, text, is_user, is_thinking=False):
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         column.set_halign(Gtk.Align.END if is_user else Gtk.Align.START)
@@ -2944,9 +3341,14 @@ class AssistantWindow(Gtk.Window):
             row.pack_start(logo, False, False, 0)
             row.pack_start(label, False, False, 0)
             label.pulsing_logo = logo
+            # _on_reply replaces this whole streaming label with rendered
+            # prose/code blocks once the full text has arrived, so it needs
+            # a handle on the container to swap into.
+            label.message_column = column
             column.pack_start(row, False, False, 0)
         else:
             label.get_style_context().add_class("message-user" if is_user else "message-assistant")
+            label.message_column = column
             column.pack_start(label, False, False, 0)
 
         self.chat_box.pack_start(column, False, False, 0)
@@ -3127,10 +3529,25 @@ class AssistantWindow(Gtk.Window):
             pulsing_logo = getattr(thinking_label, "pulsing_logo", None)
             if pulsing_logo is not None:
                 pulsing_logo.hide()
-            thinking_label.set_text(_wrap_message_text(reply))
-            style = thinking_label.get_style_context()
-            style.remove_class("message-thinking")
-            style.add_class("message-assistant")
+            column = getattr(thinking_label, "message_column", None)
+            if column is None or is_error:
+                # An error string is plain prose with no formatting to gain,
+                # and losing the message entirely because rendering tripped
+                # over it would be much worse than showing it unstyled.
+                thinking_label.set_text(_wrap_message_text(reply))
+                style = thinking_label.get_style_context()
+                style.remove_class("message-thinking")
+                style.add_class("message-assistant")
+            else:
+                # Swap the plain streaming label for the rendered body. The
+                # role label is the column's first child and stays; every
+                # widget after it belonged to the in-progress reply.
+                children = column.get_children()
+                for child in children[1:]:
+                    column.remove(child)
+                    child.destroy()
+                column.pack_start(self._render_message_body(reply), False, False, 0)
+                column.show_all()
 
         # A failed turn (timeout, connection error, etc.) stays visible in
         # the chat transcript above (the bubble is already on screen) but
