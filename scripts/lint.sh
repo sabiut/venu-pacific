@@ -162,6 +162,37 @@ else
     echo "NOTE: dpkg-parsechangelog not available, skipping changelog check"
 fi
 
+# Every maintainer script in debian/ must actually reach its package.
+#
+# Six of them were deleted by a cleanup command whose glob
+# ("rm -rf debian/venu-pacific-*") was meant for the staging directories and
+# also matched debian/venu-pacific-branding.postinst and its siblings. The
+# commit went through, three releases shipped, and nobody noticed: the
+# packages still built, still installed, and still contained every file --
+# they simply stopped configuring anything. The desktop kept Debian's
+# wallpaper and boot splash, os-release lost its version, and the screen
+# locker guard was never wired up.
+#
+# Nothing about a package with a missing postinst looks wrong from the
+# outside, which is exactly why this needs a check rather than vigilance.
+echo "== maintainer scripts present =="
+for script in debian/venu-pacific-*.postinst debian/venu-pacific-*.preinst \
+              debian/venu-pacific-*.prerm debian/venu-pacific-*.postrm; do
+    [ -e "$script" ] || continue
+    base="$(basename "$script")"
+    pkg="${base%.*}"
+    grep -q "^Package: $pkg\$" debian/control \
+        || echo "NOTE: $base has no matching package in debian/control"
+done
+for expected in venu-pacific-branding.postinst venu-pacific-branding.prerm \
+                venu-pacific-desktop.postinst venu-pacific-settings.preinst \
+                venu-pacific-settings.postinst venu-pacific-settings.postrm; do
+    if [ ! -f "debian/$expected" ]; then
+        echo "FAIL: debian/$expected is missing" | tee -a "$FAIL_LOG"
+        echo "      without it the package installs but configures nothing" | tee -a "$FAIL_LOG"
+    fi
+done
+
 # The published docs name the release version in download filenames and in
 # the checksum command users copy. When that drifted behind debian/changelog
 # nothing noticed -- the site advertised an ISO filename the release would

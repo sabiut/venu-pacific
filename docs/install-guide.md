@@ -71,7 +71,7 @@ Look for your USB drive by its size and model (it'll show `TRAN` as `usb`). Then
 
 ```sh
 umount /dev/sdX1   # unmount any partitions first, if auto-mounted
-dd if=venu-pacific-26.08.7-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+dd if=venu-pacific-26.08.8-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 sync
 ```
 

@@ -1,3 +1,24 @@
+venu-pacific (26.08.8) trixie; urgency=medium
+
+  * Restore six maintainer scripts deleted in 26.08.3 by a cleanup command
+    whose glob, "rm -rf debian/venu-pacific-*", was meant for the staging
+    directories and also matched debian/venu-pacific-branding.postinst and
+    its siblings. The packages kept building, installing and containing
+    every file; they simply stopped configuring anything.
+  * Consequences, all present since 26.08.3: the desktop kept Debian's
+    ceratopsian wallpaper and boot splash instead of the volcano artwork,
+    os-release lost its VARIANT and VENU_PACIFIC_VERSION stamp, the
+    light-locker screen-locker guard was never wired up, and the console
+    login banners were never installed. The July builds had all of this
+    right, via live-build hooks that this packaging work replaced.
+  * scripts/build-debs.sh now refuses to ship a package whose maintainer
+    script did not make it into the .deb, and scripts/lint.sh fails if one
+    of the six goes missing from debian/. A package that configures nothing
+    looks completely normal from the outside, which is why this needed a
+    check rather than care.
+
+ -- sum abiut <suabiut@gmail.com>  Mon, 24 Aug 2026 21:28:57 +1100
+
 venu-pacific (26.08.7) trixie; urgency=medium
 
   * venu-pacific-assistant: indent the continuation lines of a wrapped list
