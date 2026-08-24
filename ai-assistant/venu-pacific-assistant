@@ -2115,6 +2115,13 @@ def _strip_math_delimiters(text):
     def repl(match):
         inner = match.group(1)
         stripped = inner.strip()
+        # Content ending mid-operator is not a delimited expression, it is
+        # the gap between two prices: "$112.50 - $17.00" makes the regex see
+        # a pair whose contents are "112.50 -", which has no words in it and
+        # would otherwise look like maths. The closing $ there belongs to
+        # the NEXT number, not to this one.
+        if re.search(r"[-+*/\u00d7\u00f7=]\s*$", stripped):
+            return match.group(0)
         if (_MATH_TELL.search(inner)
                 or (" " not in stripped and len(inner) <= 14)
                 or (len(stripped) <= 40 and not _PROSE_WORD.search(stripped))):
@@ -2254,6 +2261,15 @@ def _prettify_math(text):
     # capital after the number, so a decimal split across a sentence
     # boundary ("... is 3. 5 apples remain") is not mistaken for a list.
     text = re.sub(r"(?<=[.:])[ \t]+(?=\d{1,2}\.\s+[A-Z])", "\n", text)
+
+    # Same again for dash and asterisk bullets, which models write inline
+    # just as readily: "Where: - A is the amount ... - P is the principal
+    # ... - r is the annual rate" arrives as one unreadable paragraph.
+    # Anchored on a preceding "." or ":" so a subtraction ("$112.50 - $17.00",
+    # "5 - 3") is never mistaken for a bullet -- those have a digit before
+    # the dash, not a sentence ending. "* " needs the space, so it cannot
+    # collide with the "**" of bold.
+    text = re.sub(r"(?<=[.:])[ \t]+(?=[-*]\s+[A-Za-z])", "\n", text)
     return text
 
 

@@ -1,3 +1,20 @@
+venu-pacific (26.08.5) trixie; urgency=medium
+
+  * venu-pacific-assistant: fix a currency regression introduced in 26.08.3.
+    The rule added there -- a short $...$ pair with no real words in it is
+    maths -- also matched the gap between two prices: in
+    "$112.50 - $17.00 = $95.50" the regex sees a pair containing "112.50 -",
+    which has no words, so both dollar signs were stripped. Content ending
+    mid-operator is now rejected, because a delimited expression does not
+    end on a "-"; that closing $ belongs to the next number.
+  * Bulleted lists written inline are split onto separate lines, the same as
+    numbered ones were in 26.08.3. "Where: - A is the amount ... - P is the
+    principal ... - r is the annual rate" arrived as a single unreadable
+    paragraph. Anchored on a preceding "." or ":" so a subtraction is never
+    mistaken for a bullet.
+
+ -- sum abiut <suabiut@gmail.com>  Mon, 24 Aug 2026 19:40:04 +1100
+
 venu-pacific (26.08.4) trixie; urgency=medium
 
   * venu-pacific-assistant: stop the maths converter corrupting code. The
