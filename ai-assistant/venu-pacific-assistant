@@ -2749,12 +2749,19 @@ def _wrap_message_text(text, width=52):
     # line. Those fixes shipped twice and did nothing at all, because this
     # function undid them a moment later. Blank lines still separate
     # paragraphs; long lines are still wrapped.
-    lines = text.split("\n")
-    wrapped = [
-        textwrap.fill(line, width=width) if line.strip() else line
-        for line in lines
-    ]
-    return "\n".join(wrapped)
+    lines = []
+    for line in text.split("\n"):
+        if not line.strip():
+            lines.append(line)
+            continue
+        # A wrapped list item whose continuation starts at column 0 reads as
+        # a second item: "- A is the amount accumulated after n / years,
+        # including interest." looks like two bullets, not one. Indent the
+        # continuation to sit under the item's text.
+        marker = re.match(r"(\s*(?:[-*]|\d{1,2}\.)\s+)", line)
+        indent = " " * len(marker.group(1)) if marker else ""
+        lines.append(textwrap.fill(line, width=width, subsequent_indent=indent))
+    return "\n".join(lines)
 
 
 def _first_available_icon(theme, candidates):

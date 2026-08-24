@@ -45,7 +45,7 @@ First-run language choice: English, Bislama, or Fijian.
 
 ## Status
 
-Pre-release. The first release (26.08.6) is in final testing — a Vanuatu-first
+Pre-release. The first release (26.08.7) is in final testing — a Vanuatu-first
 pilot on real hardware comes before any wide distribution. Found a problem
 or want to help? [Open an issue](https://github.com/sabiut/venu-pacific/issues).
 

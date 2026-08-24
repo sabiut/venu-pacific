@@ -1,3 +1,12 @@
+venu-pacific (26.08.7) trixie; urgency=medium
+
+  * venu-pacific-assistant: indent the continuation lines of a wrapped list
+    item. A bullet long enough to wrap put its second line at column 0,
+    level with the dashes, so one item read as two. Numbered items align
+    under the text as well. Ordinary paragraphs are unaffected.
+
+ -- sum abiut <suabiut@gmail.com>  Mon, 24 Aug 2026 20:04:47 +1100
+
 venu-pacific (26.08.6) trixie; urgency=medium
 
   * venu-pacific-assistant: make the run-on list fix actually work. The line
