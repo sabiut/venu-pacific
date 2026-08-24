@@ -23,7 +23,7 @@ case "$1" in
         update-alternatives --install \
             /usr/share/images/desktop-base/desktop-background \
             desktop-background \
-            /usr/share/backgrounds/venu-pacific/sunrise-volcano.png \
+            /usr/share/backgrounds/venu-pacific/volcano-wave.png \
             100
 
         # Selecting the boot theme rebuilds the initramfs, which is slow and

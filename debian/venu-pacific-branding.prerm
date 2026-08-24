@@ -12,7 +12,7 @@ case "$1" in
         if command -v update-alternatives >/dev/null 2>&1; then
             update-alternatives --remove \
                 desktop-background \
-                /usr/share/backgrounds/venu-pacific/sunrise-volcano.png || true
+                /usr/share/backgrounds/venu-pacific/volcano-wave.png || true
         fi
 
         # Same for the boot splash: fall back to Debian's default theme

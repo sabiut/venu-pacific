@@ -16,7 +16,9 @@ circular avatar crop anyway.
   compass set (`mark.svg`, `icon-square.svg`, `lockup.svg` + PNG exports),
   kept for the wordmark lockup and history. The compass was always a
   placeholder; the volcano mark replaces it in every deployed location.
-- `wallpapers/` — `pacific-ocean.{svg,png}`, 1920x1080, the same motif as a
+- `wallpapers/` — `volcano-wave.png` is the DEFAULT desktop background:
+  the V-volcano and wave with the VENU PACIFIC wordmark, supplied by the
+  project owner. Also `pacific-ocean.{svg,png}`, 1920x1080, the same motif as a
   full desktop background: scattered wayfinding stars, the mark glowing
   bottom-right, a faint horizon swell line. Calm in the top-left where XFCE
   places desktop icons.

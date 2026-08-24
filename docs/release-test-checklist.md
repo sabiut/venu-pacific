@@ -32,7 +32,7 @@ The detailed flow lives in [manual-test-checklist.md](manual-test-checklist.md) 
 ## 2. First boot of the installed system
 
 - [ ] Login screen (LightDM) shows the Venu Pacific wallpaper and the logo as the user image
-- [ ] Log in; desktop shows the **sunrise-volcano** wallpaper
+- [ ] Log in; desktop shows the **volcano-wave** wallpaper (the branded one with the VENU PACIFIC wordmark)
       (known risk: XFCE stores wallpaper per *monitor name* and the shipped default uses generic
       names — if the wallpaper is wrong/default here, that's the open item to fix in the
       first-login script)

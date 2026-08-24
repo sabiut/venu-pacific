@@ -1,3 +1,16 @@
+venu-pacific (26.08.9) trixie; urgency=medium
+
+  * Default desktop background is now volcano-wave.png -- the branded image
+    with the V-volcano, the wave and the VENU PACIFIC wordmark, supplied by
+    the project owner (was desktop.png in the venu-wallpapers set, never
+    previously in the repository). It replaces sunrise-volcano.png, which
+    remains available as one of the other wallpapers.
+  * Changed in all four places the default is named: the branding package's
+    update-alternatives registration and its removal counterpart, the XFCE
+    defaults in /etc/skel, and venu-pacific-set-defaults.
+
+ -- sum abiut <suabiut@gmail.com>  Mon, 24 Aug 2026 21:37:24 +1100
+
 venu-pacific (26.08.8) trixie; urgency=medium
 
   * Restore six maintainer scripts deleted in 26.08.3 by a cleanup command

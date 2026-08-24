@@ -1,7 +1,7 @@
 # Download & verify
 
 !!! note "First release in final testing"
-    Venu Pacific 26.08.8 — the first public release — is currently in final
+    Venu Pacific 26.08.9 — the first public release — is currently in final
     testing. The download links below go live the moment it ships; until
     then they will show "not found". If you're part of the pilot, your
     machine or USB stick comes preloaded; this page is only needed for
@@ -13,8 +13,8 @@ Two files:
 
 | File | What it is |
 |---|---|
-| [`venu-pacific-26.08.8-amd64.iso`](https://download.venupacific.org/venu-pacific-26.08.8-amd64.iso) | The system image (~4.7 GB) |
-| [`venu-pacific-26.08.8-amd64.iso.sha256`](https://download.venupacific.org/venu-pacific-26.08.8-amd64.iso.sha256) | Its checksum, for verifying the download |
+| [`venu-pacific-26.08.9-amd64.iso`](https://download.venupacific.org/venu-pacific-26.08.9-amd64.iso) | The system image (~4.7 GB) |
+| [`venu-pacific-26.08.9-amd64.iso.sha256`](https://download.venupacific.org/venu-pacific-26.08.9-amd64.iso.sha256) | Its checksum, for verifying the download |
 
 A 4.7 GB download is heavy on Pacific connections — that's deliberate:
 everything (including the AI model and the offline encyclopedias) is inside,
@@ -30,13 +30,13 @@ A partially-downloaded or corrupted ISO produces confusing installation
 failures, so always verify before writing the USB stick. On Linux or macOS:
 
 ```bash
-sha256sum -c venu-pacific-26.08.8-amd64.iso.sha256
+sha256sum -c venu-pacific-26.08.9-amd64.iso.sha256
 ```
 
 On Windows (PowerShell):
 
 ```powershell
-Get-FileHash venu-pacific-26.08.8-amd64.iso -Algorithm SHA256
+Get-FileHash venu-pacific-26.08.9-amd64.iso -Algorithm SHA256
 ```
 
 then compare the printed hash with the contents of the `.sha256` file. It
