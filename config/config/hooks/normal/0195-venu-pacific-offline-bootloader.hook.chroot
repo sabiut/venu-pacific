@@ -1,0 +1,56 @@
+#!/bin/sh
+# Makes installing to disk work without an internet connection.
+#
+# Calamares' Debian helper (/usr/share/calamares/helpers/calamares-bootloader-config)
+# does this, unconditionally, near the end of every install:
+#
+#     if [ -d /sys/firmware/efi/efivars ]; then
+#         chroot $CHROOT apt-get -y install grub-efi
+#     else
+#         chroot $CHROOT apt-get -y install grub-pc
+#     fi
+#     chroot $CHROOT /usr/sbin/update-grub
+#
+# Neither package was in the image, so apt had to fetch it. Offline that
+# fails, and the failure cascades: no bootloader package means no
+# /etc/default/grub and no /usr/sbin/update-grub, so the next two commands
+# fail too and the install aborts at around 80% with
+#
+#     failure resolving 'deb.debian.org'
+#     sed: can't read /tmp/calamares-root-XXXX/etc/default/grub
+#     chroot: failed to run command '/usr/sbin/update-grub'
+#
+# which tells the user nothing about what to do. Confirmed on real hardware
+# during pilot testing.
+#
+# Preinstalling one of them does not work: grub-efi Conflicts grub-pc, so
+# only one can be installed, and the target machines are a mix of UEFI and
+# BIOS. What does work is leaving both in apt's local cache. unpackfs copies
+# the whole live filesystem onto the target, cache included, so apt finds a
+# local .deb and never opens a socket -- verified offline for both the UEFI
+# and the BIOS path before this hook was written.
+#
+# Safe from live-build's own tidying: the only place it clears
+# /var/cache/apt/archives is bootstrap_debootstrap, which runs long before
+# any chroot hook.
+set -e
+
+echo "=== Caching bootloader packages for offline installation ==="
+
+# Two separate invocations on purpose. grub-efi and grub-pc conflict, so
+# asking for both in one transaction makes apt refuse the lot and download
+# nothing at all -- silently, if you are not watching the exit code.
+apt-get install -y --download-only grub-efi os-prober efibootmgr
+apt-get install -y --download-only grub-pc
+
+CACHED=$(ls -1 /var/cache/apt/archives/*.deb 2>/dev/null | wc -l)
+SIZE=$(du -sh /var/cache/apt/archives 2>/dev/null | cut -f1)
+echo "=== Cached ${CACHED} .deb files (${SIZE}) for the installer ==="
+
+# A silent no-op here would ship an image whose installer fails offline in
+# exactly the way this hook exists to prevent, and nothing downstream would
+# notice. Fail the build instead.
+if [ "${CACHED}" -lt 2 ]; then
+    echo "E: bootloader packages were not cached; offline install would fail" >&2
+    exit 1
+fi

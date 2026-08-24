@@ -1,3 +1,20 @@
+venu-pacific (26.08.11) trixie; urgency=medium
+
+  * Installing to disk now works without an internet connection. Calamares'
+    Debian helper runs "apt-get install grub-efi" (or grub-pc) near the end
+    of every install, and neither was in the image, so apt had to fetch it.
+    Offline that failed and cascaded: no bootloader package meant no
+    /etc/default/grub and no update-grub, so the install aborted around 80%
+    with "failure resolving 'deb.debian.org'" and two follow-on errors that
+    tell the user nothing they can act on. Found on real hardware.
+  * Preinstalling one is not an option -- grub-efi Conflicts grub-pc and the
+    target machines are a mix of UEFI and BIOS. Both are now left in apt's
+    local cache instead, which unpackfs copies onto the target with the rest
+    of the filesystem, so apt installs from a local file. Verified offline
+    for both the UEFI and BIOS paths. Costs about 15MB.
+
+ -- sum abiut <suabiut@gmail.com>  Tue, 25 Aug 2026 01:25:48 +1100
+
 venu-pacific (26.08.10) trixie; urgency=medium
 
   * Live session no longer identifies itself as Debian. live-config's own
