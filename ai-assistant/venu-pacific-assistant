@@ -2662,7 +2662,15 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
         message = _stream_chat_completion(payload, on_content_delta=on_partial_reply)
         tool_calls = message.get("tool_calls")
         if not tool_calls:
-            return _strip_latex_artifacts((message.get("content") or "").strip())
+            # Returned VERBATIM. Prettifying here mangled code: the reply is
+            # one string at this point, so \u005f\u0069 inside an identifier like
+            # compound_interest became a subscript and shipped
+            # "compound\u1d62nterest" to the user -- broken code, in a coding
+            # answer. Formatting is the renderer's job, and only the renderer
+            # knows which parts of the reply are prose and which are code.
+            # This is also what gets saved to history, so a reloaded
+            # conversation still has its fences and re-renders correctly.
+            return (message.get("content") or "").strip()
 
         messages.append(message)
         for call in tool_calls:
@@ -3331,6 +3339,12 @@ class AssistantWindow(Gtk.Window):
         scroller = Gtk.ScrolledWindow()
         scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         scroller.set_propagate_natural_height(True)
+        # Without a minimum, the scroller takes its natural width from
+        # nothing and collapses: a reply that was ONLY a code block came out
+        # about 100px wide with every line cut off mid-token. 420px is a
+        # readable line of code and still fits the 1366px screens this is
+        # built for.
+        scroller.set_min_content_width(420)
         scroller.add(label)
         frame.pack_start(scroller, False, False, 0)
         return frame
@@ -3400,6 +3414,17 @@ class AssistantWindow(Gtk.Window):
         # entirely: pre-wrap the text ourselves with literal newlines before
         # it ever reaches the label, so there is no negotiation for GTK to
         # get wrong -- the label just displays lines that are already short.
+        # An assistant message that is not still streaming gets the full
+        # prose/code rendering. This covers reloading a saved conversation
+        # too -- without it, scrolling back through history showed raw ```
+        # fences and LaTeX where the live reply had shown formatted output.
+        if not is_user and not is_thinking:
+            body = self._render_message_body(text)
+            column.pack_start(body, False, False, 0)
+            self.chat_box.pack_start(column, False, False, 0)
+            column.show_all()
+            return body
+
         label = Gtk.Label(label=_wrap_message_text(text), xalign=0, wrap=True)
         label.set_selectable(True)
         label.set_line_wrap_mode(Gtk.WrapMode.WORD_CHAR)

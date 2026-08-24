@@ -1,3 +1,21 @@
+venu-pacific (26.08.4) trixie; urgency=medium
+
+  * venu-pacific-assistant: stop the maths converter corrupting code. The
+    reply was prettified as a single string in query_assistant, before the
+    renderer ever split prose from code, so an underscore inside an
+    identifier was read as a subscript: compound_interest reached the user
+    as "compoundᵢnterest" and csv_reader as "csvᵣeader". Broken code, in a
+    coding answer. Replies are now returned verbatim and formatted per
+    block, which is the only place that knows which parts are code.
+  * A reply consisting only of a code block collapsed to roughly 100px wide
+    with every line cut off mid-token, because the scroller had nothing to
+    take a natural width from. Code blocks now have a 420px minimum.
+  * Saved conversations re-render properly. Scrolling back through history
+    showed raw ``` fences and LaTeX, because only freshly-arrived replies
+    went through the renderer.
+
+ -- sum abiut <suabiut@gmail.com>  Mon, 24 Aug 2026 19:14:22 +1100
+
 venu-pacific (26.08.3) trixie; urgency=medium
 
   * venu-pacific-assistant: fix two maths rendering faults found in pilot
