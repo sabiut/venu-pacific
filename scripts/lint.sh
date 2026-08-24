@@ -162,6 +162,24 @@ else
     echo "NOTE: dpkg-parsechangelog not available, skipping changelog check"
 fi
 
+# The published docs name the release version in download filenames and in
+# the checksum command users copy. When that drifted behind debian/changelog
+# nothing noticed -- the site advertised an ISO filename the release would
+# never produce, and the sha256sum command on the page would have failed for
+# every user. ./scripts/sync-docs-version.sh is the fix.
+if command -v dpkg-parsechangelog >/dev/null 2>&1; then
+    doc_version="$(dpkg-parsechangelog -SVersion 2>/dev/null)"
+    for page in docs/download.md docs/install-guide.md docs/index.md; do
+        [ -f "$page" ] || continue
+        stale="$(grep -oE "venu-pacific-[0-9]{2}\.[0-9]{2}(\.[0-9]+)?-amd64" "$page" \
+                 | grep -v "venu-pacific-$doc_version-amd64" | sort -u || true)"
+        if [ -n "$stale" ]; then
+            echo "FAIL: $page names $stale but debian/changelog says $doc_version" | tee -a "$FAIL_LOG"
+            echo "      run ./scripts/sync-docs-version.sh" | tee -a "$FAIL_LOG"
+        fi
+    done
+fi
+
 # The keyring package is what points an installed machine at the archive.
 # Building it without the archive's public key would produce a keyring that
 # trusts nothing, and apt would reject every Venu Pacific package on every

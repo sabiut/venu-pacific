@@ -8,6 +8,7 @@ Build and maintenance tooling.
 | `build-debs-in-docker.sh` | the same build inside a Debian trixie container, for machines where `debhelper` cannot be installed (no sudo). Hands the output back to your user so publishing works afterwards. |
 | `lint.sh` | the CI checks: shell and Python syntax, systemd unit validity, XML/JSON/gettext validity, packaging metadata, and that nothing has drifted back to `/usr/local`. |
 | `update-pot.sh` | regenerates the gettext template from the source strings. |
+| `sync-docs-version.sh` | rewrites the release version in the published docs to match `debian/changelog`. Run it after bumping the version — `lint.sh` fails if the two disagree, because a stale filename on the download page means the checksum command users copy would fail for all of them. |
 | `apt-repo/` | the signed package archive installed machines update from — key handling, archive metadata config, and the publish script. See [its README](apt-repo/README.md). |
 | `moet-pack/` | permission-gated tooling for the MoET curriculum pack. Ships nothing until written permission exists — see [its README](moet-pack/README.md). |
 

@@ -238,6 +238,7 @@ out of step.
 ```bash
 # from the repo root, on main, with the tree clean
 dch -v 26.08 --distribution trixie   # or edit debian/changelog directly
+./scripts/sync-docs-version.sh       # download filenames on the site follow
 git commit -am "Release 26.08"
 git tag -a v26.08 -m "Venu Pacific 26.08 — first public release"
 git push origin main v26.08
