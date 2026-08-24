@@ -1,3 +1,25 @@
+venu-pacific (26.08.12) trixie; urgency=medium
+
+  * Learn (Kolibri) no longer reports a false failure. The launcher asked
+    "kolibri status" whether the server was running, but status exits
+    non-zero both when Kolibri is stopped AND while it is still starting
+    up, and startup takes 20-40s on this hardware. A second click during
+    that window -- what an impatient user does when the first click seems
+    to do nothing -- was read as "not running", tried to start a second
+    server, and Kolibri correctly refused. The user then saw "could not
+    start, try restarting the computer" about a server that was working
+    and about to open. Found from a real ~/.kolibri/logs/kolibri.txt on
+    the pilot machine.
+  * It now asks whether anything is serving HTTP on the port, which is the
+    only thing it actually needs to know and is true exactly when opening
+    the browser will work. A refused start is no longer fatal: already
+    starting is a success from the user's point of view.
+  * Kolibri's output goes to ~/.cache/venu-pacific-learn.log instead of
+    /dev/null, and the timeout dialog names that file. Discarding it is why
+    this took a log file on the pilot machine to diagnose at all.
+
+ -- sum abiut <suabiut@gmail.com>  Tue, 25 Aug 2026 02:12:53 +1100
+
 venu-pacific (26.08.11) trixie; urgency=medium
 
   * Installing to disk now works without an internet connection. Calamares'

@@ -21,6 +21,9 @@
 
 KOLIBRI_BIN="/opt/venu-pacific/kolibri/kolibri.pex"
 KOLIBRI_URL="http://127.0.0.1:8080"
+LOG="${XDG_CACHE_HOME:-$HOME/.cache}/venu-pacific-learn.log"
+
+mkdir -p "$(dirname "$LOG")" 2>/dev/null
 
 fail() {
     # zenity ships with the XFCE desktop; notify-send (libnotify-bin, on
@@ -36,11 +39,42 @@ fail() {
     exit 1
 }
 
+# Is something already answering on the port?
+#
+# This replaces an earlier `kolibri status` check, which was the wrong
+# question and produced a wrong answer at the worst moment. status exits
+# non-zero both when Kolibri is stopped AND while it is still starting up,
+# and startup takes 20-40s on the hardware this targets. So a second click
+# during startup -- exactly what an impatient user does when the first
+# click appears to do nothing -- was read as "not running", started a
+# second server, and Kolibri rightly refused with "There is another
+# Kolibri server running". The user then saw "could not start, try
+# restarting the computer" about a server that was working perfectly and
+# about to open. Confirmed from a real ~/.kolibri/logs/kolibri.txt during
+# pilot testing.
+#
+# "Is it serving HTTP?" is the only thing this script actually needs to
+# know, it has exactly one answer, and it is true precisely when the next
+# step (open the browser) will work.
+serving() {
+    wget -q --spider -T 2 "$KOLIBRI_URL" 2>/dev/null
+}
+
 [ -x "$KOLIBRI_BIN" ] || fail "The Learn app is not installed correctly (missing $KOLIBRI_BIN). Please report this."
 
-if ! "$KOLIBRI_BIN" status >/dev/null 2>&1; then
-    "$KOLIBRI_BIN" start --background --port 8080 >/dev/null 2>&1 \
-        || fail "The Learn app could not start. If this keeps happening, restart the computer and try again."
+if ! serving; then
+    # Not answering yet: either stopped, or already starting from an
+    # earlier click. Attempt a start either way -- if one is already
+    # coming up this is refused harmlessly, and the wait loop below is
+    # what decides whether we succeeded. Deliberately NOT fatal on
+    # non-zero: "another server is already starting" is a success from
+    # the user's point of view, and treating it as failure is the bug
+    # this rewrite exists to remove.
+    {
+        echo "--- $(date -Is) starting Kolibri"
+        "$KOLIBRI_BIN" start --background --port 8080
+        echo "--- start exited $?"
+    } >>"$LOG" 2>&1
 fi
 
 # Wait until the server actually answers HTTP before opening the browser.
@@ -48,13 +82,17 @@ fi
 # very first launch also runs database setup -- slow on the low-spec
 # hardware this targets. Without this wait, the user's first-ever
 # experience of Learn is Firefox's "Unable to connect" page with no hint
-# that a simple reload would fix it. 90s budget: generous for first-run
-# DB migration, and the loop exits the moment the server responds.
+# that a simple reload would fix it. 120s budget: generous for first-run
+# DB migration on a slow disk, and the loop exits the moment the server
+# responds.
 tries=0
-until wget -q --spider -T 2 "$KOLIBRI_URL" 2>/dev/null; do
+until serving; do
     tries=$((tries + 1))
-    if [ "$tries" -ge 90 ]; then
-        fail "The Learn app is taking too long to start. Please try again in a minute."
+    if [ "$tries" -ge 120 ]; then
+        fail "The Learn app is taking too long to start.
+
+Please try again in a minute. If it keeps happening, the details are in:
+$LOG"
     fi
     sleep 1
 done
