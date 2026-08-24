@@ -1,3 +1,21 @@
+venu-pacific (26.08.13) trixie; urgency=medium
+
+  * The offline-install fix in 26.08.11 never reached any image. It left
+    the bootloader .debs in /var/cache/apt/archives, and live-build's
+    chroot_archives remove step deletes that entire directory after the
+    chroot stage -- verified by building 26.08.12 and finding zero cached
+    debs in the squashfs. The hook had even reported success, because
+    live-build restores its whole multi-gigabyte build cache into the same
+    directory, so "are there debs here" was true for the wrong reason.
+  * The debs now live in /opt/venu-pacific/offline-debs, which nothing
+    cleans, and the hook patches Calamares' bootloader helper to copy them
+    into the target's apt cache just before its apt-get install runs. The
+    hook fails the build unless both grub-efi-amd64 and grub-pc are present
+    by name and the patched helper passes a syntax check. Online installs
+    behave exactly as before; the preload is additive.
+
+ -- sum abiut <suabiut@gmail.com>  Tue, 25 Aug 2026 03:05:59 +1100
+
 venu-pacific (26.08.12) trixie; urgency=medium
 
   * Learn (Kolibri) no longer reports a false failure. The launcher asked

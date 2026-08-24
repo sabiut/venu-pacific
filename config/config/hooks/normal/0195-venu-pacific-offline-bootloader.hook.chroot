@@ -11,46 +11,80 @@
 #     fi
 #     chroot $CHROOT /usr/sbin/update-grub
 #
-# Neither package was in the image, so apt had to fetch it. Offline that
-# fails, and the failure cascades: no bootloader package means no
-# /etc/default/grub and no /usr/sbin/update-grub, so the next two commands
-# fail too and the install aborts at around 80% with
+# Neither package is installed in the image (they conflict with each other,
+# and the target machines are a mix of UEFI and BIOS), so apt must fetch
+# one. Offline that fails and cascades -- no /etc/default/grub, no
+# update-grub -- and the install aborts around 80% with errors that name
+# none of it. Confirmed on real hardware during pilot testing.
 #
-#     failure resolving 'deb.debian.org'
-#     sed: can't read /tmp/calamares-root-XXXX/etc/default/grub
-#     chroot: failed to run command '/usr/sbin/update-grub'
+# FIRST ATTEMPT AT THIS, AND WHY IT FAILED: leave both .debs in apt's cache
+# (/var/cache/apt/archives) and let the helper's apt-get find them locally.
+# Verified working in a container -- but live-build's chroot_archives
+# "remove" step runs `rm -rf chroot/var/cache/apt` unconditionally after
+# the chroot stage, so the cache never reaches the squashfs. The hook even
+# looked successful, because live-build restores its whole 3GB package
+# cache into that directory during the build, so "are there debs in the
+# cache" was true for the wrong reason.
 #
-# which tells the user nothing about what to do. Confirmed on real hardware
-# during pilot testing.
-#
-# Preinstalling one of them does not work: grub-efi Conflicts grub-pc, so
-# only one can be installed, and the target machines are a mix of UEFI and
-# BIOS. What does work is leaving both in apt's local cache. unpackfs copies
-# the whole live filesystem onto the target, cache included, so apt finds a
-# local .deb and never opens a socket -- verified offline for both the UEFI
-# and the BIOS path before this hook was written.
-#
-# Safe from live-build's own tidying: the only place it clears
-# /var/cache/apt/archives is bootstrap_debootstrap, which runs long before
-# any chroot hook.
+# THIS VERSION stores the debs under /opt, which nothing cleans, and
+# patches the helper to copy them into the TARGET's cache just before its
+# apt-get runs. unpackfs has already copied the live filesystem (including
+# /opt and apt's package lists) onto the target by then, so apt resolves
+# the version, finds the exact .deb already in its cache, and never opens
+# a socket. The patched helper still works online exactly as before -- the
+# preload is additive.
 set -e
 
-echo "=== Caching bootloader packages for offline installation ==="
+DEB_DIR="/opt/venu-pacific/offline-debs"
+HELPER="/usr/share/calamares/helpers/calamares-bootloader-config"
 
-# Two separate invocations on purpose. grub-efi and grub-pc conflict, so
-# asking for both in one transaction makes apt refuse the lot and download
-# nothing at all -- silently, if you are not watching the exit code.
-apt-get install -y --download-only grub-efi os-prober efibootmgr
-apt-get install -y --download-only grub-pc
+echo "=== Downloading bootloader packages for offline installation ==="
+mkdir -p "${DEB_DIR}/partial"
 
-CACHED=$(ls -1 /var/cache/apt/archives/*.deb 2>/dev/null | wc -l)
-SIZE=$(du -sh /var/cache/apt/archives 2>/dev/null | cut -f1)
-echo "=== Cached ${CACHED} .deb files (${SIZE}) for the installer ==="
+# A dedicated archives dir, NOT the default cache -- the default is both
+# polluted by live-build's restored build cache (thousands of debs) and
+# deleted wholesale after this stage. Two separate invocations on purpose:
+# grub-efi and grub-pc conflict, so one transaction naming both makes apt
+# refuse the lot and download nothing.
+apt-get -o Dir::Cache::archives="${DEB_DIR}" \
+    install -y --download-only grub-efi os-prober efibootmgr
+apt-get -o Dir::Cache::archives="${DEB_DIR}" \
+    install -y --download-only grub-pc
+rm -rf "${DEB_DIR}/partial" "${DEB_DIR}/lock"
 
-# A silent no-op here would ship an image whose installer fails offline in
-# exactly the way this hook exists to prevent, and nothing downstream would
-# notice. Fail the build instead.
-if [ "${CACHED}" -lt 2 ]; then
-    echo "E: bootloader packages were not cached; offline install would fail" >&2
-    exit 1
+# Both bootloaders must actually be here, by name -- counting files was the
+# first attempt's mistake, satisfied by the wrong directory's contents.
+for want in grub-efi-amd64_ grub-pc_; do
+    if ! ls "${DEB_DIR}/${want}"*.deb >/dev/null 2>&1; then
+        echo "E: ${want}*.deb missing from ${DEB_DIR}; offline install would fail" >&2
+        exit 1
+    fi
+done
+echo "=== Stored $(ls -1 "${DEB_DIR}"/*.deb | wc -l) debs ($(du -sh "${DEB_DIR}" | cut -f1)) in ${DEB_DIR} ==="
+
+echo "=== Patching the Calamares helper to preload them ==="
+[ -f "${HELPER}" ] || { echo "E: ${HELPER} not found" >&2; exit 1; }
+
+# Insert the preload immediately before the helper announces itself. The
+# marker line doubles as the idempotence guard and as something a later
+# hook or human can grep for.
+if ! grep -q "venu-pacific offline preload" "${HELPER}"; then
+    awk -v debdir="${DEB_DIR}" '
+        /^echo "Running bootloader-config\.\.\."/ && !done {
+            print "# venu-pacific offline preload: give the target apt a local copy of the"
+            print "# bootloader packages so the install below works with no internet."
+            print "if ls " debdir "/*.deb >/dev/null 2>&1; then"
+            print "    mkdir -p $CHROOT/var/cache/apt/archives/partial"
+            print "    cp " debdir "/*.deb $CHROOT/var/cache/apt/archives/"
+            print "fi"
+            done=1
+        }
+        { print }
+    ' "${HELPER}" > "${HELPER}.new"
+    grep -q "venu-pacific offline preload" "${HELPER}.new" \
+        || { echo "E: helper patch did not apply (anchor line changed?)" >&2; exit 1; }
+    chmod --reference="${HELPER}" "${HELPER}.new"
+    mv "${HELPER}.new" "${HELPER}"
 fi
+sh -n "${HELPER}" || { echo "E: patched helper fails syntax check" >&2; exit 1; }
+echo "=== Helper patched and syntax-checked ==="
