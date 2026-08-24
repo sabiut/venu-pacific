@@ -1,3 +1,17 @@
+venu-pacific (26.08.10) trixie; urgency=medium
+
+  * Live session no longer identifies itself as Debian. live-config's own
+    defaults are LIVE_HOSTNAME="debian", LIVE_USERNAME="user" and
+    LIVE_USER_FULLNAME="Debian Live user", and nothing had ever overridden
+    them: the XFCE panel named the user "Debian Live user" in the top-right
+    corner, and every terminal prompt read user@debian. Now venu, on
+    venu-pacific, shown as "Venu Pacific Live User".
+  * Ships through includes.chroot rather than a package because live-config
+    only runs on the live session; an installed machine gets its name and
+    hostname from Calamares instead.
+
+ -- sum abiut <suabiut@gmail.com>  Mon, 24 Aug 2026 22:52:54 +1100
+
 venu-pacific (26.08.9) trixie; urgency=medium
 
   * Default desktop background is now volcano-wave.png -- the branded image
