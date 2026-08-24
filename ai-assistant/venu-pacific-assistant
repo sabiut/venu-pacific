@@ -2742,11 +2742,19 @@ def _wrap_message_text(text, width=52):
     Preserves intentional paragraph breaks (blank lines) from the model's
     own formatting -- only wraps within each paragraph, not across them.
     """
-    paragraphs = text.split("\n\n")
+    # Wraps line by line, NOT paragraph by paragraph. textwrap.fill collapses
+    # every newline inside what it is given, so filling a whole paragraph
+    # silently destroys single line breaks -- including the ones
+    # _prettify_math inserts to put each item of a run-on list on its own
+    # line. Those fixes shipped twice and did nothing at all, because this
+    # function undid them a moment later. Blank lines still separate
+    # paragraphs; long lines are still wrapped.
+    lines = text.split("\n")
     wrapped = [
-        textwrap.fill(p, width=width) if p.strip() else p for p in paragraphs
+        textwrap.fill(line, width=width) if line.strip() else line
+        for line in lines
     ]
-    return "\n\n".join(wrapped)
+    return "\n".join(wrapped)
 
 
 def _first_available_icon(theme, candidates):

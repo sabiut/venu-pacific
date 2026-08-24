@@ -1,3 +1,16 @@
+venu-pacific (26.08.6) trixie; urgency=medium
+
+  * venu-pacific-assistant: make the run-on list fix actually work. The line
+    breaks added in 26.08.3 (numbered lists) and 26.08.5 (bulleted lists)
+    were inserted correctly and then thrown away a moment later:
+    _wrap_message_text filled whole paragraphs with textwrap.fill, which
+    collapses every newline inside what it is given. Both fixes shipped and
+    neither had any effect on screen. It now wraps line by line, so blank
+    lines still separate paragraphs, long lines are still wrapped, and
+    deliberate line breaks survive.
+
+ -- sum abiut <suabiut@gmail.com>  Mon, 24 Aug 2026 19:53:26 +1100
+
 venu-pacific (26.08.5) trixie; urgency=medium
 
   * venu-pacific-assistant: fix a currency regression introduced in 26.08.3.
