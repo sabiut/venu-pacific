@@ -1,3 +1,24 @@
+venu-pacific (26.08.3) trixie; urgency=medium
+
+  * venu-pacific-assistant: fix two maths rendering faults found in pilot
+    testing on real hardware.
+  * "$2x + 3$" kept its delimiters. The test for "is this pair of dollar
+    signs maths or money?" wanted a backslash, a caret or digit-operator-
+    digit, and a variable breaks all three. A short pair with no word of
+    three or more letters in it is now treated as an expression, which keeps
+    "it costs $5 and then $10 more" as prose.
+  * The quadratic formula came out as "frac-b ± √(b² - 4ac)2a". \frac was
+    matched with a regex whose arguments could not contain braces, so the
+    single most-requested formula in school maths -- whose numerator holds a
+    \sqrt{} -- never matched at all. Replaced with a brace-counting parser
+    that recurses into its arguments; it now renders (-b ± √(b² - 4ac))/(2a),
+    with the denominator bracketed so precedence stays unambiguous.
+  * Numbered steps written by the model as one running paragraph are split
+    onto separate lines. "is 2x. 2. Differentiate 3x" read as part of the
+    equation rather than the start of step two.
+
+ -- sum abiut <suabiut@gmail.com>  Mon, 24 Aug 2026 19:00:56 +1100
+
 venu-pacific (26.08.2) trixie; urgency=medium
 
   * venu-pacific-assistant: render maths and code properly. Pilot testing on

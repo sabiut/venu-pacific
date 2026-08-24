@@ -2092,6 +2092,12 @@ _LATEX_SYMBOLS = {
 # equation. The earlier version of this only handled "$ " followed by
 # whitespace, which left "$x^2$" showing its delimiters on screen.
 _MATH_TELL = re.compile(r"[\\^_{}=]|\b\d+\s*[+\u00d7\u00f7/*-]\s*\d+")
+# "$2x + 3$" is obviously an equation but has none of the tells above -- the
+# variable breaks the digit-operator-digit pattern. What separates it from
+# prose is that prose contains words: "5 and then " (from "it costs $5 and
+# then $10 more") has "and" and "then", while an expression is made of short
+# tokens. So a short pair with no run of three or more letters is maths.
+_PROSE_WORD = re.compile(r"[A-Za-z]{3,}")
 _DOLLAR_PAIR = re.compile(r"\$\$?([^$\n]{1,80}?)\$\$?")
 
 
@@ -2108,10 +2114,92 @@ def _to_script(body, table, prefix):
 def _strip_math_delimiters(text):
     def repl(match):
         inner = match.group(1)
-        if _MATH_TELL.search(inner) or (" " not in inner.strip() and len(inner) <= 14):
+        stripped = inner.strip()
+        if (_MATH_TELL.search(inner)
+                or (" " not in stripped and len(inner) <= 14)
+                or (len(stripped) <= 40 and not _PROSE_WORD.search(stripped))):
             return inner
         return match.group(0)
     return _DOLLAR_PAIR.sub(repl, text)
+
+
+def _read_braced_group(text, index):
+    """Contents of the {...} starting at index, and the index just past its
+    closing brace. Returns (None, index) if there is no balanced group."""
+    if index >= len(text) or text[index] != "{":
+        return None, index
+    depth = 0
+    for position in range(index, len(text)):
+        if text[position] == "{":
+            depth += 1
+        elif text[position] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[index + 1:position], position + 1
+    return None, index
+
+
+def _expand_braced_commands(text):
+    r"""Expand \frac and \sqrt, counting braces properly.
+
+    This cannot be a regular expression. The obvious pattern uses [^{}]* for
+    each argument, which silently fails the moment an argument contains
+    braces of its own -- and the single most common formula anyone asks for
+    does exactly that: \frac{-b \pm \sqrt{b^2-4ac}}{2a}. The match failed,
+    \frac fell through to the generic backslash-stripping rule, and the
+    quadratic formula reached the user as "frac-b ± √(b² - 4ac)2a".
+
+    Arguments are expanded recursively, innermost first, so a root inside a
+    fraction comes out right.
+    """
+    out = []
+    index = 0
+    while index < len(text):
+        matched = False
+        for command in (r"\dfrac", r"\tfrac", r"\frac"):
+            if text.startswith(command, index):
+                cursor = index + len(command)
+                while cursor < len(text) and text[cursor] == " ":
+                    cursor += 1
+                numerator, cursor = _read_braced_group(text, cursor)
+                if numerator is None:
+                    break
+                while cursor < len(text) and text[cursor] == " ":
+                    cursor += 1
+                denominator, cursor = _read_braced_group(text, cursor)
+                if denominator is None:
+                    break
+                numerator = _expand_braced_commands(numerator).strip()
+                denominator = _expand_braced_commands(denominator).strip()
+                if not re.fullmatch(r"[\w.]+", numerator):
+                    numerator = "({})".format(numerator)
+                # The denominator is bracketed unless it is a single
+                # character: "(-b ± √(b²-4ac))/2a" reads as .../2 times a to
+                # anyone applying the precedence rules, and this is a machine
+                # for teaching them.
+                if not re.fullmatch(r"[\w.]", denominator):
+                    denominator = "({})".format(denominator)
+                out.append("{}/{}".format(numerator, denominator))
+                index = cursor
+                matched = True
+                break
+        if matched:
+            continue
+        if text.startswith(r"\sqrt", index):
+            cursor = index + len(r"\sqrt")
+            while cursor < len(text) and text[cursor] == " ":
+                cursor += 1
+            argument, cursor = _read_braced_group(text, cursor)
+            if argument is not None:
+                argument = _expand_braced_commands(argument).strip()
+                if not re.fullmatch(r"[\w.]+", argument):
+                    argument = "({})".format(argument)
+                out.append("\u221a" + argument)
+                index = cursor
+                continue
+        out.append(text[index])
+        index += 1
+    return "".join(out)
 
 
 def _prettify_math(text):
@@ -2135,28 +2223,7 @@ def _prettify_math(text):
                   r"\1", text)
     text = text.replace(r"\left", "").replace(r"\right", "")
 
-    def _fraction(match):
-        num, den = match.group(1).strip(), match.group(2).strip()
-        num = num if re.fullmatch(r"[\w.]+", num) else "({})".format(num)
-        # The denominator is parenthesised unless it is a single character:
-        # "(x+1)/2y" reads as ((x+1)/2)*y to anyone applying the precedence
-        # rules, and this is a machine for teaching them.
-        den = den if re.fullmatch(r"[\w.]", den) else "({})".format(den)
-        return "{}/{}".format(num, den)
-
-    for _ in range(3):                       # nested fractions
-        replaced = re.sub(r"\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}",
-                          _fraction, text)
-        if replaced == text:
-            break
-        text = replaced
-
-    text = re.sub(
-        r"\\sqrt\s*\{([^{}]*)\}",
-        lambda m: "\u221a" + (m.group(1) if re.fullmatch(r"[\w.]+", m.group(1))
-                          else "({})".format(m.group(1))),
-        text,
-    )
+    text = _expand_braced_commands(text)
 
     # Longest names first so \leq is not eaten by \le.
     for name in sorted(_LATEX_SYMBOLS, key=len, reverse=True):
@@ -2179,6 +2246,14 @@ def _prettify_math(text):
     text = re.sub(r"\{([^{}]*)\}", r"\1", text)      # leftovers like 3{,}750
     text = re.sub(r"(?<=[\d)])\s\*\s(?=[\d(])", " \u00d7 ", text)
     text = re.sub(r"[ \t]{2,}", " ", text)
+
+    # Models frequently write a numbered list as one running paragraph:
+    # "1. Differentiate x^2: ... is 2x. 2. Differentiate 3x: ... is 3."
+    # On screen that reads as arithmetic gone wrong -- "is 2x. 2." looks
+    # like part of the equation. Put each step on its own line. Requires a
+    # capital after the number, so a decimal split across a sentence
+    # boundary ("... is 3. 5 apples remain") is not mistaken for a list.
+    text = re.sub(r"(?<=[.:])[ \t]+(?=\d{1,2}\.\s+[A-Z])", "\n", text)
     return text
 
 
