@@ -61,6 +61,24 @@ want to help build these as part of a release process instead of one-off locally
 
 ## 2. Write it to a USB drive
 
+Writing the image **erases everything on the USB drive** — check it holds nothing
+you need before starting.
+
+### From Windows or macOS
+
+Use [Balena Etcher](https://etcher.balena.io/) (Windows/macOS/Linux, free) —
+three clicks:
+
+1. **Flash from file** → choose `venu-pacific-26.08.13-amd64.iso`
+2. **Select target** → choose your USB drive (check the size matches your stick!)
+3. **Flash** — and wait for both the write **and the verify step** to finish
+   before unplugging
+
+On Windows, [Rufus](https://rufus.ie/) also works: select the ISO, pick the
+drive, keep the defaults, and if it asks choose **Write in DD Image mode**.
+
+### From Linux
+
 Find your drive first — **get this right, the next command erases the whole device**:
 
 ```sh
