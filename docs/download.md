@@ -1,10 +1,9 @@
 # Download & verify
 
 !!! success "Venu Pacific 26.08.13 — the first public release"
-    Everything on this page was tested on real hardware before release,
-    including installing to disk with **no internet connection at all**.
-    What's included, honest limitations, and hardware requirements are in
-    the [release notes](https://github.com/sabiut/venu-pacific/releases/tag/v26.08.13).
+    Venu Pacific 26.08.13 is ready to download. See the
+    [release notes](https://github.com/sabiut/venu-pacific/releases/tag/v26.08.13)
+    for what's included and hardware requirements.
 
 ## What you'll download
 
