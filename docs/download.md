@@ -6,10 +6,6 @@
     What's included, honest limitations, and hardware requirements are in
     the [release notes](https://github.com/sabiut/venu-pacific/releases/tag/v26.08.13).
 
-    **Part of the pilot?** Your machine or USB stick comes preloaded —
-    there's nothing to download. This page is for everyone else, and for
-    re-installs.
-
 ## What you'll download
 
 Two files:
