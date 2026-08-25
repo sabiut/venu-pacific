@@ -1,11 +1,10 @@
 # Download & verify
 
-!!! note "First release in final testing"
-    Venu Pacific 26.08.13 — the first public release — is currently in final
-    testing. The download links below go live the moment it ships; until
-    then they will show "not found". If you're part of the pilot, your
-    machine or USB stick comes preloaded; this page is only needed for
-    re-installs.
+!!! success "Venu Pacific 26.08.13 is available"
+    The first public release. Verified on real hardware — including
+    installing to disk with no internet connection at all. If you're part
+    of the pilot, your machine or USB stick comes preloaded; this page is
+    for downloads and re-installs.
 
 ## What you'll download
 
