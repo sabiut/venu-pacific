@@ -1,3 +1,19 @@
+venu-pacific (26.08.15) trixie; urgency=medium
+
+  * venu-pacific-assistant: remove the translate-to-Bislama/Fijian buttons
+    added in 26.08.14. Pilot testing showed the model cannot translate into
+    either language: Fijian came out with Samoan morphology and Bislama
+    parroted the prompt's example phrases instead of translating. Verified
+    against the real model with few-shot prompts built from the reviewed
+    translation catalogs -- prompting does not create a capability the
+    model lacks. A dedicated button endorses output the way free-form chat
+    does not, and a confident wrong-language rendering of safety text is
+    worse than no button. Free-form translation in chat remains, covered by
+    the existing accuracy disclaimer. The calculate tool from 26.08.14 is
+    unaffected and stays.
+
+ -- sum abiut <suabiut@gmail.com>  Thu, 27 Aug 2026 19:31:22 +1100
+
 venu-pacific (26.08.14) trixie; urgency=medium
 
   * venu-pacific-assistant: new calculate tool. Pilot testing caught the

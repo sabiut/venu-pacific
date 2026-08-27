@@ -69,7 +69,7 @@ you need before starting.
 Use [Balena Etcher](https://etcher.balena.io/) (Windows/macOS/Linux, free) —
 three clicks:
 
-1. **Flash from file** → choose `venu-pacific-26.08.14-amd64.iso`
+1. **Flash from file** → choose `venu-pacific-26.08.15-amd64.iso`
 2. **Select target** → choose your USB drive (check the size matches your stick!)
 3. **Flash** — and wait for both the write **and the verify step** to finish
    before unplugging
@@ -89,7 +89,7 @@ Look for your USB drive by its size and model (it'll show `TRAN` as `usb`). Then
 
 ```sh
 umount /dev/sdX1   # unmount any partitions first, if auto-mounted
-dd if=venu-pacific-26.08.14-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+dd if=venu-pacific-26.08.15-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 sync
 ```
 

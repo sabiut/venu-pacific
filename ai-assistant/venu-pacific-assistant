@@ -3530,39 +3530,22 @@ class AssistantWindow(Gtk.Window):
             label.set_line_wrap_mode(Gtk.WrapMode.WORD_CHAR)
             bubble.pack_start(label, False, False, 0)
 
-        # One-tap translation of this reply. The languages are fixed to the
-        # two the project ships catalogs for; translation itself is just a
-        # normal model turn (there is no separate translation pipeline --
-        # see ROADMAP.md), so each button sends a short prompt through the
-        # ordinary send path. The reply text is embedded in the prompt
-        # rather than referred to as "your previous answer" because these
-        # buttons also appear on older messages when a saved conversation
-        # is reloaded, where "previous" would silently mean the wrong one.
-        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        tag = Gtk.Label(label=_("Translate:"), xalign=0)
-        tag.get_style_context().add_class("code-lang")
-        row.pack_start(tag, False, False, 0)
-        for language in ("Bislama", "Fijian"):
-            button = Gtk.Button(label=language)
-            button.get_style_context().add_class("code-copy")
-            button.set_relief(Gtk.ReliefStyle.NONE)
-            button.connect("clicked", self._on_translate_clicked, text, language)
-            row.pack_start(button, False, False, 0)
-        bubble.pack_start(row, False, False, 0)
+        # NO translate-to-Bislama/Fijian buttons here, and that is a
+        # decision, not an omission. They shipped in 26.08.14 and were
+        # pulled one version later: pilot testing showed the model cannot
+        # actually translate into either language -- Fijian came out with
+        # Samoan morphology (fa'a- prefixes), and Bislama parroted
+        # whatever example phrases the prompt contained instead of
+        # translating the text. Verified against the real model with
+        # few-shot prompts built from the reviewed .po catalogs and
+        # Qwen's recommended sampling; prompting does not create a
+        # capability the model lacks. A dedicated button endorses its
+        # output in a way free-form chat (covered by the header
+        # disclaimer) does not -- and a confident wrong-language
+        # rendering of cyclone-safety text is worse than no button.
+        # Revisit only after a model that demonstrably handles bi/fj
+        # lands (test with locales/*/venu-pacific.po pairs first).
         return bubble
-
-    def _on_translate_clicked(self, _button, reply_text, language):
-        # entry sensitivity doubles as the "a turn is in flight" flag (see
-        # on_send) -- starting a second turn mid-generation is exactly the
-        # conversation-corruption hazard on_send's freeze exists to prevent.
-        if not self.entry.get_sensitive():
-            return
-        prompt = (
-            "Translate the following into {language}. "
-            "Output only the translation, nothing else:\n\n{body}"
-        ).format(language=language, body=reply_text)
-        self.entry.set_text(prompt)
-        self.on_send()
 
     def _add_message(self, text, is_user, is_thinking=False):
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
