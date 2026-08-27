@@ -119,6 +119,11 @@ Tools — approval dialogs must appear for every gated one:
 - [ ] **Offline Content Guide** and **Vikidia**: both open; Vikidia has real bundled content
 - [ ] **Wikipedia (Bislama)** and **Science Simulations (PhET)** menu entries open their
       bundled ZIMs in kiwix-desktop (added 2026-08-01; ~21MB combined)
+- [ ] Ask a money question ("8 textbooks at $12.50 with 15% off") — the
+      arithmetic must be CORRECT, not just well-formatted (the model calls
+      its calculate tool; a wrong number here is a regression)
+- [ ] The Translate: Bislama / Fijian buttons under a reply produce a
+      translation as a new turn
 - [ ] Assistant's offline search now lists three collections (vikidia, wikipedia-bislama,
       phet-bislama) — ask it "what offline collections do you have?"
 - [ ] **Synaptic**: launches and can search a package (apt works post-install)

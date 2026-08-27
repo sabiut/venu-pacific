@@ -45,7 +45,7 @@ First-run language choice: English, Bislama, or Fijian.
 
 ## Status
 
-**Venu Pacific 26.08.13 is released** — verified end to end on real
+**Venu Pacific 26.08.14 is released** — verified end to end on real
 hardware, offline installation included. The Vanuatu-first pilot is
 underway; wide distribution follows it. Found a problem or want to help?
 [Open an issue](https://github.com/sabiut/venu-pacific/issues).

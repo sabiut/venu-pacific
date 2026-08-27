@@ -1,3 +1,20 @@
+venu-pacific (26.08.14) trixie; urgency=medium
+
+  * venu-pacific-assistant: new calculate tool. Pilot testing caught the
+    model answering a question about 8 textbooks with the numbers for 9 --
+    a language model predicts digits rather than computing them. Arithmetic
+    now goes through an exact evaluator (ast-based with a strict whitelist,
+    never eval) that handles the notation the model actually writes:
+    unicode operators, thousands separators, caret powers, percentages.
+    The prompt directs the model to use it for anything beyond a trivial
+    single step.
+  * One-tap translation under every assistant reply: Bislama and Fijian
+    buttons that send the reply back through the normal model path as a
+    translation request. The reply text is embedded in the prompt so the
+    buttons are also correct on older messages in a reloaded conversation.
+
+ -- sum abiut <suabiut@gmail.com>  Thu, 27 Aug 2026 19:10:27 +1100
+
 venu-pacific (26.08.13) trixie; urgency=medium
 
   * The offline-install fix in 26.08.11 never reached any image. It left
