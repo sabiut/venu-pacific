@@ -708,7 +708,12 @@ SYSTEM_PROMPT = (
     "search the internet. Only if the user declines, or there is no internet, may you "
     "give your best recollection -- and then you MUST open with a clear warning that it "
     "is unverified and may be wrong, not state it as fact. When your answer does come "
-    "from a search result, briefly say so (e.g. 'according to Wikipedia').\n\n"
+    "from a search result, briefly say so (e.g. 'according to Wikipedia'). This holds "
+    "for facts about Vanuatu and Fiji too: get_disaster_info and get_services_info hold "
+    "safety guidance and service contacts only, so a result from them that does not "
+    "contain the date, name or figure leaves it unverified -- search the offline "
+    "collections for it in that same turn (an offline search needs no permission, so "
+    "do not stop to ask), never fill it in from memory.\n\n"
     "If a general knowledge question isn't answered by the offline reference collections, "
     "tell the user honestly that you couldn't find it locally, then say you'll check the "
     "internet, then call search_internet. Do NOT do this for disaster/government-service "
@@ -994,6 +999,17 @@ def tool_get_battery_status():
 DISASTER_INFO_DIR = "/usr/share/venu-pacific/disaster-info"
 SERVICES_DIRECTORY_DIR = "/usr/share/venu-pacific/services-directory"
 KNOWN_COUNTRIES = ["vanuatu", "fiji"]
+# Appended to every disaster/services result. The model was seen calling
+# get_disaster_info for "what year did Cyclone Pam hit", receiving cyclone
+# safety steps, and answering "2015" flatly -- it had used a tool, so it
+# took the prompt's no-facts-from-memory rule as satisfied. Saying what
+# the content is NOT, inside the result it has to read, is the cheapest
+# place to break that.
+NOT_A_FACT_SOURCE = (
+    "\n\n(Safety guidance and contacts only -- not a source for dates, history, "
+    "populations or other statistics. For those, search the offline collections now, "
+    "without asking first.)"
+)
 
 
 def _load_country_json(base_dir, country):
@@ -1114,19 +1130,29 @@ def tool_get_disaster_info(country, hazard=None):
     )
 
     hazards = data.get("hazards", {})
+    # The model sends hazard='none' when it means "no hazard" -- seen for
+    # real once the enum was dropped. Treat the usual spellings as omitted.
+    if hazard and hazard.strip().lower() in ("none", "null", "any", "all", "n/a"):
+        hazard = None
     if not hazard:
         available = ", ".join(h["label"] for h in hazards.values()) if hazards else "none listed"
         return (
             f"{contacts_text}\n\nAvailable hazard guidance for {data.get('name', country)}: "
             f"{available}. Ask again naming a specific hazard for detailed before/during/after "
-            f"guidance."
+            f"guidance.{NOT_A_FACT_SOURCE}"
         )
 
     hazard_key = hazard.strip().lower()
     if hazard_key not in hazards:
+        # This branch carries the footer too. Without it, "when did Vanuatu
+        # become independent?" -> get_disaster_info(hazard='none') -> this
+        # message -> "September 30, 1980", flat, three runs out of three:
+        # the one result without the reminder was the one answered from
+        # memory.
         return (
             f"{contacts_text}\n\nNo guidance found for hazard '{hazard}'. Available: "
             + ", ".join(hazards.keys())
+            + NOT_A_FACT_SOURCE
         )
 
     info = hazards[hazard_key]
@@ -1140,6 +1166,7 @@ def tool_get_disaster_info(country, hazard=None):
         f"{contacts_text}\n\n{info.get('label', hazard)} guidance for "
         f"{data.get('name', country)}:\n\n{body}"
         f"{_format_sources(data.get('sources'))}"
+        f"{NOT_A_FACT_SOURCE}"
     )
 
 
@@ -1154,7 +1181,9 @@ def tool_get_services_info(country, category=None):
     # cannot skim past.
     not_here = (
         "\n\n(Emergency numbers -- police, fire, ambulance, NDMO -- are not in this "
-        "directory. Call get_disaster_info for those.)"
+        "directory: call get_disaster_info for those. Nor are dates, history, "
+        "populations or other statistics: for those, search the offline collections "
+        "now, without asking first.)"
     )
     categories = data.get("categories", {})
     if not category:
@@ -1264,10 +1293,22 @@ def tool_search_offline_encyclopedia(query, collection=None):
     zims = _discover_zim_files()
     if not zims:
         return "No offline encyclopedia/reference content is currently available."
+    # Seen in every evaluation run: the model writes collection='Vikidia'
+    # (or guesses 'Wikipedia') before it has seen the real names, and a
+    # hard "no such collection" error cost a whole extra round each time.
+    # Match case-insensitively, and when the name is still unknown search
+    # everything -- an answer from all collections beats an error.
+    note = ""
     if collection:
-        if collection not in zims:
-            return f"No collection named '{collection}'. Available: " + ", ".join(sorted(zims.keys()))
-        zims = {collection: zims[collection]}
+        wanted = collection.strip().lower()
+        match = next((name for name in zims if name.lower() == wanted), None)
+        if match:
+            zims = {match: zims[match]}
+        else:
+            note = (
+                f"(No collection named '{collection}'; searched all available: "
+                + ", ".join(sorted(zims.keys())) + ".)\n"
+            )
 
     all_results = []
     for name, path in zims.items():
@@ -1281,9 +1322,13 @@ def tool_search_offline_encyclopedia(query, collection=None):
             continue
 
     if not all_results:
-        return f"No articles found for '{query}'."
+        return (
+            f"No articles found for '{query}' in the offline collections. Nothing offline "
+            "verifies this: tell the user so and offer search_internet, rather than "
+            "answering from memory."
+        )
     return (
-        "Matching articles. Use get_encyclopedia_article with the exact title AND "
+        note + "Matching articles. Use get_encyclopedia_article with the exact title AND "
         "collection name to read one:\n" + "\n".join(all_results[:10])
     )
 
@@ -2757,6 +2802,46 @@ def prewarm_prefix():
         _prewarm_done.set()
 
 
+# A reply that announces a check ("Let me search the offline collections
+# for that.") and then ends the turn with no tool call. The prompt forbids
+# it in as many words, and a 4B model does it anyway: nine replies out of
+# fifteen in one evaluation run of the fact cases, each one leaving the
+# user with no answer and a promise. The fix is structural, not another
+# sentence of prompt: when this pattern is the whole reply and rounds
+# remain, send the model its own words back with a one-line instruction
+# and let it make the call. One nudge per turn, never on the forced final
+# round, and none of it is persisted -- the UI saves only the user's text
+# and the reply that finally comes back.
+#
+# An announced INTERNET search is left alone: search_internet is gated
+# behind an approval dialog, and "would you like me to search the
+# internet?" is the offer the prompt asks for before that dialog.
+_ANNOUNCED_CHECK_RE = re.compile(
+    r"\b(let me|let's|i will|i'll|i am going to|i'm going to|i need to|i would need to|"
+    r"would you like me to|shall i|do you want me to)\s+"
+    r"(?:now\s+|also\s+|first\s+|then\s+|go ahead and\s+)?(?:try\s+(?:to\s+)?)?"
+    r"(search|check|look|find|verify|consult|query)(?:ing)?\b",
+    re.IGNORECASE,
+)
+NARRATION_NUDGE = (
+    "You said you would check but made no tool call. Call the tool now and answer "
+    "from its result. If no tool covers it, say so plainly instead of promising to check."
+)
+
+
+def _announces_without_acting(text):
+    for match in _ANNOUNCED_CHECK_RE.finditer(text or ""):
+        start = max(text.rfind(".", 0, match.start()), text.rfind("\n", 0, match.start())) + 1
+        end = len(text)
+        for stop in ".?!\n":
+            index = text.find(stop, match.end())
+            if index != -1:
+                end = min(end, index)
+        if "internet" not in text[start:end].lower():
+            return True
+    return False
+
+
 def query_assistant(user_text, history, request_approval, on_partial_reply=None):
     # Hold the request until any in-flight prewarm finishes -- see
     # _prewarm_done above for why sending immediately is worse, not
@@ -2785,6 +2870,15 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
     # answer grounded in whatever's already been retrieved instead of
     # attempting a tool call that would just be dropped on the floor.
     MAX_TOOL_ROUNDS = 4
+    nudges_left = 1
+    # search_internet is described as a last resort after the offline
+    # collections, and the model skips straight to it anyway for anything
+    # that sounds like a statistic ("population of Fiji", 3 runs out of 3).
+    # Order is enforced here, where it cannot be skimmed past: an internet
+    # search before any offline search in this turn is answered with a
+    # redirect instead of run -- and the user is not asked to approve
+    # mobile-data use for a search that should not happen yet.
+    offline_searched = False
     for round_index in range(MAX_TOOL_ROUNDS + 1):
         force_final_answer = round_index == MAX_TOOL_ROUNDS
         # enable_thinking=false disables Qwen3's reasoning mode at the
@@ -2817,6 +2911,19 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
         message = _stream_chat_completion(payload, on_content_delta=on_partial_reply)
         tool_calls = message.get("tool_calls")
         if not tool_calls:
+            content = (message.get("content") or "").strip()
+            if (
+                not force_final_answer
+                and nudges_left
+                and _announces_without_acting(content)
+            ):
+                # See _ANNOUNCED_CHECK_RE above. The partial text the user
+                # has watched arrive is replaced by the next round's, so
+                # they see "Let me check..." followed by the real answer.
+                nudges_left -= 1
+                messages.append(message)
+                messages.append({"role": "user", "content": NARRATION_NUDGE})
+                continue
             # Returned VERBATIM. Prettifying here mangled code: the reply is
             # one string at this point, so \u005f\u0069 inside an identifier like
             # compound_interest became a subscript and shipped
@@ -2825,7 +2932,7 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
             # knows which parts of the reply are prose and which are code.
             # This is also what gets saved to history, so a reloaded
             # conversation still has its fences and re-renders correctly.
-            return (message.get("content") or "").strip()
+            return content
 
         messages.append(message)
         for call in tool_calls:
@@ -2847,7 +2954,15 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
             # turn as "Sorry, something went wrong", discarding everything
             # already streamed. Returned as text, the model can react ("I
             # couldn't open the settings because...") and the turn survives.
-            if name in READ_ONLY_TOOLS:
+            if name == "search_offline_encyclopedia":
+                offline_searched = True
+            if name == "search_internet" and not offline_searched:
+                result = (
+                    "Not run: search the offline collections first "
+                    "(search_offline_encyclopedia). Use search_internet only if they "
+                    "have nothing relevant."
+                )
+            elif name in READ_ONLY_TOOLS:
                 try:
                     result = READ_ONLY_TOOLS[name](**arguments)
                 except TypeError as exc:
