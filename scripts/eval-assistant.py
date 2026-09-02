@@ -58,6 +58,12 @@ same class):
     Also seen: every encyclopedia lookup costs a wasted round because the
     model writes collection='Vikidia' first and the tool wants 'vikidia'.
 
+    2026-09-03, emergency-number routing fixed (prompt sentence, tool
+    descriptions, and a footer in every get_services_info result naming
+    the right tool): fj-police-number, vu-ndmo-number and the two number
+    cases added with the fix pass 4/4; services unchanged 7/7; the prefix
+    grew to 4,173 tokens.
+
 Usage: start the shipped llama-server on the candidate model, then run:
 
     config/chroot/opt/venu-pacific/llama.cpp/bin/llama-server \\
@@ -265,6 +271,16 @@ CASES = [
      "must_call": ["get_disaster_info"],
      "args": {"get_disaster_info": {"country": "vanuatu"}},
      "reply_any": [["22699"]]},
+    {"id": "vu-ambulance-number", "tags": ["disaster"],
+     "ask": "Which number do I call for an ambulance in Vanuatu?",
+     "must_call": ["get_disaster_info"],
+     "args": {"get_disaster_info": {"country": "vanuatu"}},
+     "reply_any": [["115"]]},
+    {"id": "fj-fire-number", "tags": ["disaster"],
+     "ask": "How do I call the fire brigade in Fiji?",
+     "must_call": ["get_disaster_info"],
+     "args": {"get_disaster_info": {"country": "fiji"}},
+     "reply_any": [["910"]]},
     {"id": "fj-tsunami-now", "tags": ["disaster"],
      "ask": "There's a tsunami warning in Fiji. What do we do right now?",
      "must_call": ["get_disaster_info"],

@@ -682,11 +682,13 @@ SYSTEM_PROMPT = (
     "confirming are three separate steps, and only a tool result moves you "
     "from one to the next.\n\n"
     "For ANY question about disaster/emergency safety (cyclone, tsunami, "
-    "earthquake) or official government/health/education procedures "
+    "earthquake), emergency phone numbers (police, fire, ambulance, NDMO), "
+    "or official government/health/education procedures "
     "(passports, business registration, hospitals, schools, etc.) in "
     "Vanuatu or Fiji, you MUST call get_disaster_info or get_services_info "
     "first and answer only from what they return -- never answer these "
-    "topics from general knowledge. If the tool says the country or topic "
+    "topics from general knowledge. Emergency numbers come from "
+    "get_disaster_info, never from get_services_info or memory. If the tool says the country or topic "
     "isn't covered, say so honestly. Do not fall back to generic or "
     "other-country knowledge (e.g. do not describe a US, UK, or Australian "
     "government process for a Vanuatu or Fiji question) -- wrong-country "
@@ -1146,6 +1148,14 @@ def tool_get_services_info(country, category=None):
     if error:
         return error
 
+    # Stated in the result, not only in the schema: the model was seen
+    # sending "what's the police number" here, finding no such entry, and
+    # inventing one. A tool result it has to read is the one place it
+    # cannot skim past.
+    not_here = (
+        "\n\n(Emergency numbers -- police, fire, ambulance, NDMO -- are not in this "
+        "directory. Call get_disaster_info for those.)"
+    )
     categories = data.get("categories", {})
     if not category:
         available = ", ".join(
@@ -1154,6 +1164,7 @@ def tool_get_services_info(country, category=None):
         return (
             f"Available service categories for {data.get('name', country)}: {available}. "
             f"Ask again naming a specific category for the actual contacts/details."
+            f"{not_here}"
         )
 
     cat_key = category.strip().lower()
@@ -1181,6 +1192,7 @@ def tool_get_services_info(country, category=None):
         f"{categories[cat_key].get('label', category)} services in {data.get('name', country)}:"
         f"\n\n{body}"
         f"{_format_sources(data.get('sources'))}"
+        f"{not_here}"
     )
 
 
@@ -1805,11 +1817,12 @@ TOOL_REGISTRY = [
         "handler": tool_get_disaster_info,
         "schema": {
             "description": (
-                "Get real, official, cited emergency contacts and cyclone/tsunami/earthquake "
-                "safety guidance for a Pacific country. This is authoritative, human-reviewed "
+                "Get the official emergency phone numbers (police, fire, ambulance, maritime, "
+                "NDMO, weather/geohazard line) and cited cyclone/tsunami/earthquake safety "
+                "guidance for a Pacific country. This is authoritative, human-reviewed "
                 "content -- always prefer this over general knowledge for disaster/safety "
-                "questions about a covered country. If hazard is omitted, returns emergency "
-                "contacts plus which hazards are available."
+                "questions about a covered country. If hazard is omitted, returns the "
+                "emergency numbers plus which hazards are available."
             ),
             "parameters": {
                 "type": "object",
@@ -1841,8 +1854,9 @@ TOOL_REGISTRY = [
                 "content -- always prefer this over general knowledge for official-procedure "
                 "questions about a covered country, and never invent details from a different "
                 "country's system (e.g. do not answer with US/UK/Australian procedures for a "
-                "Pacific country question). If category is omitted, returns which categories "
-                "are available."
+                "Pacific country question). Emergency numbers (police, fire, ambulance, NDMO) "
+                "are NOT here -- use get_disaster_info for those. If category is omitted, "
+                "returns which categories are available."
             ),
             "parameters": {
                 "type": "object",
