@@ -64,6 +64,18 @@ same class):
     cases added with the fix pass 4/4; services unchanged 7/7; the prefix
     grew to 4,173 tokens.
 
+    2026-09-03, same day: validating that fix showed samoa-not-covered
+    passing only by luck. The country enum on both lookup tools forced a
+    Samoa question to be asked as country=fiji; the model then presented
+    Fiji's real earthquake steps as "general international advice" for
+    Samoa, 3 runs out of 3. The hazard enum also omitted volcano, so
+    Vanuatu's reviewed ashfall guidance was unreachable. Both enums
+    dropped, values described in words instead: samoa-not-covered now
+    sends country=samoa and relays the not-covered message; the new
+    vu-volcano-ash case passes 3/3; tonga-licence passes. Known
+    intermittent: fj-volcano-honest says "no guidance" correctly but
+    pads it with generic volcano tips about 1 run in 3. Prefix 4,218.
+
 Usage: start the shipped llama-server on the candidate model, then run:
 
     config/chroot/opt/venu-pacific/llama.cpp/bin/llama-server \\
@@ -251,8 +263,11 @@ UNVERIFIED = [
 NOT_COVERED = [
     "not covered", "no information", "don't have", "do not have", "isn't available",
     "is not available", "not available", "no guidance", "couldn't find", "could not find",
-    "only", "vanuatu", "fiji",
+    "only vanuatu", "only fiji", "only cover", "only have", "does not provide",
+    "doesn't provide", "no specific guidance", "not provide", "no volcano",
 ]
+# What a substituted answer looks like: the covered countries' own steps.
+GENERIC_STEPS = ["drop to the ground", "take cover", "drop, cover", "hold on", "high ground"]
 
 CASES = [
     # -- disaster: the reviewed content must be the source ------------------
@@ -295,10 +310,18 @@ CASES = [
      "ask": "What should I do if a volcano erupts in Fiji?",
      "must_call": ["get_disaster_info"],
      "args": {"get_disaster_info": {"country": "fiji"}},
-     "reply_any": [NOT_COVERED + ["isn't", "is not", "no volcano"]]},
+     "reply_any": [NOT_COVERED],
+     # No made-up volcano advice either: the prompt says relay "not
+     # covered", not pad it with generic tips.
+     "reply_none": ["emergency kit", "seek shelter", "stay informed", "evacuation route"]},
     {"id": "samoa-not-covered", "tags": ["disaster", "honesty"],
      "ask": "What should I do during an earthquake in Samoa?",
-     "reply_any": [NOT_COVERED]},
+     "reply_any": [NOT_COVERED], "reply_none": GENERIC_STEPS},
+    {"id": "vu-volcano-ash", "tags": ["disaster"],
+     "ask": "The volcano is erupting and ash is falling on our village in Vanuatu. What should we do?",
+     "must_call": ["get_disaster_info"],
+     "args": {"get_disaster_info": {"country": "vanuatu", "hazard": "volcano"}},
+     "reply_any": [["mask", "damp cloth", "indoors", "windows"]]},
     {"id": "bi-cyclone", "tags": ["disaster", "multilingual"],
      "ask": "Wanem mi mas mekem bifo saeklon i kam long Vanuatu?",
      "must_call": ["get_disaster_info"],

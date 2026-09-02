@@ -682,7 +682,7 @@ SYSTEM_PROMPT = (
     "confirming are three separate steps, and only a tool result moves you "
     "from one to the next.\n\n"
     "For ANY question about disaster/emergency safety (cyclone, tsunami, "
-    "earthquake), emergency phone numbers (police, fire, ambulance, NDMO), "
+    "earthquake, volcano), emergency phone numbers (police, fire, ambulance, NDMO), "
     "or official government/health/education procedures "
     "(passports, business registration, hospitals, schools, etc.) in "
     "Vanuatu or Fiji, you MUST call get_disaster_info or get_services_info "
@@ -1827,15 +1827,31 @@ TOOL_REGISTRY = [
             "parameters": {
                 "type": "object",
                 "properties": {
+                    # No enum on either field, deliberately. With country
+                    # restricted to the covered list, a question about Samoa
+                    # could only be asked as country=fiji -- the model then
+                    # received Fiji's real guidance and relabelled it "general
+                    # international advice" for Samoa (seen 3/3 runs in
+                    # scripts/eval-assistant.py). Letting it send "samoa" means
+                    # the tool's own not-covered message reaches it, which is
+                    # the honest answer the prompt demands. And the hazard enum
+                    # left out volcano, so Vanuatu's reviewed ashfall guidance
+                    # was unreachable. The handlers lowercase and validate.
                     "country": {
                         "type": "string",
-                        "enum": KNOWN_COUNTRIES,
-                        "description": "The country to look up.",
+                        "description": (
+                            "The country to look up. Covered: vanuatu, fiji. Any other "
+                            "country returns a not-covered message -- relay it, do not "
+                            "substitute another country's guidance."
+                        ),
                     },
                     "hazard": {
                         "type": "string",
-                        "enum": ["cyclone", "tsunami", "earthquake"],
-                        "description": "Optional: a specific hazard for detailed before/during/after guidance.",
+                        "description": (
+                            "Optional: cyclone, tsunami, earthquake, or volcano (Vanuatu "
+                            "only) for detailed before/during/after guidance. Omit it when "
+                            "the user only needs the emergency numbers."
+                        ),
                     },
                 },
                 "required": ["country"],
@@ -1863,8 +1879,11 @@ TOOL_REGISTRY = [
                 "properties": {
                     "country": {
                         "type": "string",
-                        "enum": KNOWN_COUNTRIES,
-                        "description": "The country to look up.",
+                        "description": (
+                            "The country to look up. Covered: vanuatu, fiji. Any other "
+                            "country returns a not-covered message -- relay it, do not "
+                            "substitute another country's procedures."
+                        ),
                     },
                     "category": {
                         "type": "string",
