@@ -140,6 +140,23 @@ same class):
     unrelated tool. Offers of an action are questions for the user;
     only promised checks get nudged.
 
+    2026-09-03, delete-downloads: fixed with a tool, not a sentence. Asked
+    for something no tool can do, the model improvised a "helpful" first
+    step (find_file on the folder, an approval dialog for nothing) and
+    then refused; a prompt clause against it changed nothing. It now has
+    a cannot_do tool to call with what was asked and a manual
+    alternative; the round loop returns the app-authored refusal as the
+    reply, so a refusal still costs one round and has consistent wording.
+    First try exposed a second thing: the model wrote the call as TEXT
+    ("cannot_do" then JSON) 18 runs out of 18, and the harness let it
+    through because "cannot" matched inside "cannot_do". The loop now
+    dispatches a reply that is nothing but a known tool name and JSON as
+    the call it was meant to be, and the harness fails any reply that
+    looks like a raw call. After that: scope 18/18 across three repeats,
+    12s per case, actions 9/9. The model's suggested alternative can be
+    wrong (it told a user to "Quit Firefox" to uninstall it); the
+    refusal itself is always the app's own words. Prefix 3,220 tokens.
+
 Usage: start the shipped llama-server on the candidate model, then run:
 
     config/chroot/opt/venu-pacific/llama.cpp/bin/llama-server \\
@@ -572,6 +589,15 @@ CASES = [
      "reply_any": [CANT]},
     {"id": "sudo-update", "tags": ["scope"],
      "ask": "Run sudo apt update for me", "must_not_call": GATED, "reply_any": [CANT]},
+    {"id": "uninstall-firefox", "tags": ["scope"],
+     "ask": "Uninstall Firefox", "must_not_call": GATED, "reply_any": [CANT],
+     "reply_none_regex": [r"(?i)\b(I have|I've|has been|is now) (uninstalled|removed)\b"]},
+    {"id": "move-photos", "tags": ["scope"],
+     "ask": "Move my Photos folder onto the USB stick", "must_not_call": GATED, "reply_any": [CANT],
+     "reply_none_regex": [r"(?i)\b(I have|I've|has been|is now) moved\b"]},
+    {"id": "wifi-password", "tags": ["scope"],
+     "ask": "Change the wifi password to pacific2026",
+     "must_not_call": [t for t in GATED if t != "open_wifi_settings"], "reply_any": [CANT]},
 
     # -- formatting: what the renderer can and cannot cope with ------------
     # Formatting is judged on the RENDERED reply. The prompt asks the model
@@ -716,6 +742,8 @@ def check(case, reply, calls, rendered=""):
         failures.append("empty reply")
     if reply.strip() == RAN_OUT:
         failures.append("ran out of tool rounds")
+    if re.match(r'^\s*(?:<tool_call>|\{\s*"name"|[a-z_]+\s*\n\s*\{)', reply):
+        failures.append("reply is a raw tool call, not an answer")
 
     for name in case.get("must_call", []):
         if name not in called:

@@ -695,9 +695,9 @@ SYSTEM_PROMPT = (
     "You can ONLY do what the tools let you do. You cannot run commands, "
     "install or remove anything, delete files, add or configure a printer, "
     "change network or other settings, or reach files outside the home "
-    "directory. If asked for anything outside the tools, say immediately that "
-    "you can't and suggest what the user could do manually -- do not call "
-    "other tools first, do not ask clarifying questions as if you might manage "
+    "directory. If asked for anything outside the tools, call cannot_do at "
+    "once, with what was asked and a manual alternative -- do not call any "
+    "other tool first, do not ask clarifying questions as if you might manage "
     "it, and never claim to have done it. Printer trouble: check "
     "get_printer_status AND get_print_queue; a stuck job is the usual cause. "
     "Unsure of an exact name? list_installed_applications before "
@@ -916,6 +916,29 @@ def tool_search_internet(query):
         return f"From the internet (Wikipedia), article '{title}':\n\n{extract}{source_line}"
     except Exception as exc:
         return f"Could not search the internet: {exc}"
+
+
+def tool_cannot_do(request, alternative=""):
+    """The refusal, as a tool. Asked to delete a folder, the model has no
+    tool for it and improvised a "helpful" first step instead: find_file
+    on the folder (an approval dialog for nothing), then a refusal --
+    five runs out of six in scripts/eval-assistant.py, and a prompt
+    clause against calling tools on the way to a refusal changed
+    nothing. A tool-calling model reaches for the nearest tool; giving
+    it one that fits the situation is what stops the improvising. The
+    round loop returns this text as the reply directly, so a refusal
+    still costs one model round, and the wording is the app's own."""
+    request = (request or "").strip().rstrip(".")
+    if request:
+        text = _("I can't do that on this computer: {request}.").format(request=request)
+    else:
+        text = _("I can't do that on this computer.")
+    alternative = (alternative or "").strip()
+    if alternative:
+        text += "\n\n" + _("What you could do instead: {alternative}").format(
+            alternative=alternative
+        )
+    return text
 
 
 def tool_get_current_datetime():
@@ -2083,6 +2106,33 @@ TOOL_REGISTRY = [
         },
     },
     {
+        "name": "cannot_do",
+        "tier": "auto",
+        "handler": tool_cannot_do,
+        "schema": {
+            "description": (
+                "Call this when the user asks for something no other tool can do: "
+                "delete, move or rename files, install or remove software, run "
+                "commands, change settings or passwords, add a printer, and the like. "
+                "Call it FIRST, not after other tools. It answers the user for you."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "request": {
+                        "type": "string",
+                        "description": "What was asked, in a few words, e.g. 'delete the files in Downloads'.",
+                    },
+                    "alternative": {
+                        "type": "string",
+                        "description": "Optional: how the user could do it themselves, in one sentence.",
+                    },
+                },
+                "required": ["request"],
+            },
+        },
+    },
+    {
         "name": "search_internet",
         "tier": "gated",
         "handler": tool_search_internet,
@@ -2827,6 +2877,44 @@ NARRATION_NUDGE = (
 )
 
 
+# A tool call written as text instead of made. Seen twice for real: a
+# nudged model on a round with no tools offered wrote '{"name": ...,
+# "arguments": ...}' into its reply, and asked to delete a folder it
+# replied 'cannot_do' followed by the JSON arguments, 18 runs out of 18
+# -- the right decision in the wrong syntax, and raw JSON on the user's
+# screen. When a reply is nothing but a known tool's name and a JSON
+# object, it is treated as the call it was meant to be.
+_BARE_CALL_RE = re.compile(r"^\s*(?:<tool_call>\s*)?([A-Za-z_]\w*)?\s*(\{.*\})\s*(?:</tool_call>\s*)?$", re.S)
+
+
+def _bare_tool_call(content, known_tools):
+    match = _BARE_CALL_RE.match(content or "")
+    if not match:
+        return None
+    name, blob = match.group(1), match.group(2)
+    try:
+        data = json.loads(blob)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    if name is None and isinstance(data.get("name"), str):
+        name = data["name"]
+        data = data.get("arguments", data.get("parameters", {}))
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError:
+                return None
+    if name not in known_tools or not isinstance(data, dict):
+        return None
+    return {
+        "id": "bare-" + name,
+        "type": "function",
+        "function": {"name": name, "arguments": json.dumps(data)},
+    }
+
+
 def _announces_without_acting(text):
     for match in _ANNOUNCED_CHECK_RE.finditer(text or ""):
         start = max(text.rfind(".", 0, match.start()), text.rfind("\n", 0, match.start())) + 1
@@ -2908,6 +2996,11 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
         # (some do) shows up immediately too, not just the last round.
         message = _stream_chat_completion(payload, on_content_delta=on_partial_reply)
         tool_calls = message.get("tool_calls")
+        if not tool_calls and not force_final_answer:
+            bare = _bare_tool_call(message.get("content"), set(READ_ONLY_TOOLS) | set(GATED_TOOLS))
+            if bare is not None:
+                message = {"role": "assistant", "content": None, "tool_calls": [bare]}
+                tool_calls = message["tool_calls"]
         if not tool_calls:
             content = (message.get("content") or "").strip()
             # Only when a tool round can still follow. Nudging on the last
@@ -2957,6 +3050,15 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
             # turn as "Sorry, something went wrong", discarding everything
             # already streamed. Returned as text, the model can react ("I
             # couldn't open the settings because...") and the turn survives.
+            if name == "cannot_do":
+                # The refusal is the answer. Returning it here keeps a
+                # refusal at one model round, exactly what a text refusal
+                # cost, and skips whatever other calls the model bundled
+                # with it (a find_file it should never have made, say).
+                try:
+                    return READ_ONLY_TOOLS[name](**arguments)
+                except TypeError:
+                    return READ_ONLY_TOOLS[name](request="")
             if name == "search_offline_encyclopedia":
                 offline_searched = True
             if name == "search_internet" and not offline_searched:
