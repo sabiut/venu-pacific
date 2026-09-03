@@ -712,8 +712,8 @@ SYSTEM_PROMPT = (
     "for facts about Vanuatu and Fiji too: get_disaster_info and get_services_info hold "
     "safety guidance and service contacts only, so a result from them that does not "
     "contain the date, name or figure leaves it unverified -- search the offline "
-    "collections for it in that same turn (an offline search needs no permission, so "
-    "do not stop to ask), never fill it in from memory.\n\n"
+    "collections for it in that same turn (an offline encyclopedia search needs no "
+    "permission, so do not stop to ask), never fill it in from memory.\n\n"
     "If a general knowledge question isn't answered by the offline reference collections, "
     "tell the user honestly that you couldn't find it locally, then say you'll check the "
     "internet, then call search_internet. Do NOT do this for disaster/government-service "
@@ -748,7 +748,8 @@ SYSTEM_PROMPT = (
     "settings, access files outside the home directory, or "
     "change settings directly. If asked to do something outside this list, "
     "say clearly and immediately that you can't do that and suggest what "
-    "the user could do manually -- never ask clarifying questions as if you "
+    "the user could do manually -- do not call other tools first as a step "
+    "towards it, never ask clarifying questions as if you "
     "might be able to do it, and never claim "
     "to have done something you have no tool for."
 )
@@ -1007,8 +1008,8 @@ KNOWN_COUNTRIES = ["vanuatu", "fiji"]
 # place to break that.
 NOT_A_FACT_SOURCE = (
     "\n\n(Safety guidance and contacts only -- not a source for dates, history, "
-    "populations or other statistics. For those, search the offline collections now, "
-    "without asking first.)"
+    "populations or other statistics. If the user asked for one of those, search the "
+    "offline collections for it now, without asking first.)"
 )
 
 
@@ -1182,8 +1183,8 @@ def tool_get_services_info(country, category=None):
     not_here = (
         "\n\n(Emergency numbers -- police, fire, ambulance, NDMO -- are not in this "
         "directory: call get_disaster_info for those. Nor are dates, history, "
-        "populations or other statistics: for those, search the offline collections "
-        "now, without asking first.)"
+        "populations or other statistics: if the user asked for one of those, search "
+        "the offline collections for it now, without asking first.)"
     )
     categories = data.get("categories", {})
     if not category:
@@ -1894,8 +1895,11 @@ TOOL_REGISTRY = [
                         "type": "string",
                         "description": (
                             "Optional: cyclone, tsunami, earthquake, or volcano (Vanuatu "
-                            "only) for detailed before/during/after guidance. Omit it when "
-                            "the user only needs the emergency numbers."
+                            "only) for detailed before/during/after guidance. Name the "
+                            "hazard the user's question is about, in any language "
+                            "(Bislama saeklon = cyclone, etkwek = earthquake, volkeno = "
+                            "volcano; French séisme = earthquake, volcan = volcano). Omit "
+                            "it only when the user asks for nothing but the numbers."
                         ),
                     },
                 },
@@ -2818,9 +2822,12 @@ def prewarm_prefix():
 # internet?" is the offer the prompt asks for before that dialog.
 _ANNOUNCED_CHECK_RE = re.compile(
     r"\b(let me|let's|i will|i'll|i am going to|i'm going to|i need to|i would need to|"
-    r"would you like me to|shall i|do you want me to)\s+"
+    r"would you like me to|shall i|do you want me to|i can help you|i could)\s+"
     r"(?:now\s+|also\s+|first\s+|then\s+|go ahead and\s+)?(?:try\s+(?:to\s+)?)?"
-    r"(search|check|look|find|verify|consult|query)(?:ing)?\b",
+    r"(search|check|look|find|verify|consult|query)(?:ing)?\b"
+    # ...or hands the user the job of using a tool only the model has:
+    # "you may want to consult an offline reference collection".
+    r"|\b(consult|check|search|look in)\s+(an|the|our|your)\s+offline\s+(reference\s+)?collection",
     re.IGNORECASE,
 )
 NARRATION_NUDGE = (
@@ -2912,8 +2919,13 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
         tool_calls = message.get("tool_calls")
         if not tool_calls:
             content = (message.get("content") or "").strip()
+            # Only when a tool round can still follow. Nudging on the last
+            # tool round hands the model a forced no-tools round with "call
+            # the tool now" fresh in its context, and it obliged by writing
+            # the call as raw JSON text into the reply (seen once in a full
+            # run). Better an unkept promise than that.
             if (
-                not force_final_answer
+                round_index + 1 < MAX_TOOL_ROUNDS
                 and nudges_left
                 and _announces_without_acting(content)
             ):

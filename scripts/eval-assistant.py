@@ -93,6 +93,22 @@ same class):
     desktop 7/7 unchanged. Prefix 4,297 tokens; the honest path costs
     3-5 model rounds, which is the price of not making things up.
 
+    Same day, what the first full run after that found (48/56): the
+    nudge could fire on the last tool round, handing the model a forced
+    no-tools round that it answered with its tool call as raw JSON text
+    (now: no nudge unless a tool round can follow); the footer's "search
+    the offline collections now" was read as an order even when no fact
+    was asked, costing Bislama questions two extra rounds (now
+    conditional on the user having asked for a date or figure); and the
+    Bislama cyclone question stopped naming its hazard once the enum was
+    gone (the hazard description now carries saeklon/etkwek/volkeno and
+    the French words). After those: bi-cyclone 5/5, vu-independence 6/7,
+    pam-year 2/2, fiji-population 2/3 (the miss was honest but worded
+    outside the list). Known regression kept, not hidden: delete-downloads
+    now refuses honestly but runs find_file first, 5 runs out of 6, and
+    the prompt clause against calling tools before a refusal did not
+    stop it. Prefix 4,359 tokens.
+
 Usage: start the shipped llama-server on the candidate model, then run:
 
     config/chroot/opt/venu-pacific/llama.cpp/bin/llama-server \\
@@ -285,12 +301,13 @@ UNVERIFIED = [
     "can't confirm", "no offline", "not in the offline", "not available offline",
     "not include", "doesn't include", "does not include", "not provide", "cannot provide",
     "can't provide", "cannot answer", "can't answer", "not able to answer",
+    "not mentioned", "not directly mentioned", "reliable source", "official source",
 ]
 NOT_COVERED = [
     "not covered", "no information", "don't have", "do not have", "isn't available",
     "is not available", "not available", "no guidance", "couldn't find", "could not find",
     "only vanuatu", "only fiji", "only cover", "only have", "does not provide",
-    "doesn't provide", "no specific guidance", "not provide", "no volcano",
+    "doesn't provide", "no specific", "not provide", "no volcano",
 ]
 # What a substituted answer looks like: the covered countries' own steps.
 GENERIC_STEPS = ["drop to the ground", "take cover", "drop, cover", "hold on", "high ground"]
