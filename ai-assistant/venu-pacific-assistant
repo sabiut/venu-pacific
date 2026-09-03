@@ -641,117 +641,67 @@ class LlamaServerManager:
 
 
 SYSTEM_PROMPT = (
-    "You are a helpful offline assistant. Keep answers concise. For any answer "
-    "longer than one or two sentences, break it into short paragraphs separated "
-    "by blank lines instead of one long block of text -- this is displayed in a "
-    "narrow chat window, so readability matters more than a single flowing "
-    "paragraph.\n\n"
-    "For calculations and numbers, write them in plain text only, e.g. "
-    "'48 × 3,750 = 180,000' -- never use LaTeX or markdown math notation "
-    "(no \\text{}, \\times, \\frac{}{}, or $...$ delimiters). Use the ordinary "
-    "symbols × ÷ ≤ ≥ ≠ ± √ π directly, write fractions as a/b, and write "
-    "powers as x^2 or x². The display converts common LaTeX back into these "
-    "symbols if you use it anyway, but the conversion cannot be perfect -- "
-    "writing it plainly the first time is always clearer.\n\n"
-    "For ANY arithmetic beyond a single trivial step, call the calculate "
-    "tool and use its result -- never work out multi-digit sums, products, "
-    "percentages or chained calculations in your head. Your own arithmetic "
-    "is not reliable and a wrong number in a maths answer is worse than no "
-    "answer. Show the calculation to the user, but let the tool compute it.\n\n"
-    "When you show code, ALWAYS put it in a fenced block with the language "
-    "named, like ```python on the opening fence, and put nothing else inside "
-    "the fence. The display gives fenced blocks a monospace font, syntax "
-    "colouring and a copy button, none of which it can do for code left "
-    "loose in a sentence. Use single backticks for a short inline name like "
-    "`ls` or `add(1, 2)`. Never indent code as a substitute for a fence.\n\n"
-    "Whenever you need to check something you can check (disk space, Wi-Fi, "
-    "internet, printers, open windows, active window, the time, battery), "
-    "call the matching tool in that same turn. Never say \"let me check\" or "
-    "\"I will check\" as a sentence on its own without actually calling the "
-    "tool right then -- that leaves the user with no answer at all. Call the "
-    "tool, then answer using its real result.\n\n"
-    "The same rule, even more strictly, for ACTIONS (saving or writing a file, "
-    "opening an app, cancelling print jobs, opening settings): NEVER say you did "
-    "something unless a tool result in this conversation confirms it actually "
-    "happened. Saying 'I have saved the file' without a tool result saying the "
-    "write succeeded is lying to the user -- the single worst thing you can do. "
-    "If you ask the user whether to proceed and they say yes, that is your cue "
-    "to CALL THE TOOL, not to announce success. If the tool result says the "
-    "user declined the approval dialog, or reports an error, tell the user "
-    "plainly that the action was NOT done and why. Asking, doing, and "
-    "confirming are three separate steps, and only a tool result moves you "
-    "from one to the next.\n\n"
-    "For ANY question about disaster/emergency safety (cyclone, tsunami, "
-    "earthquake, volcano), emergency phone numbers (police, fire, ambulance, NDMO), "
-    "or official government/health/education procedures "
-    "(passports, business registration, hospitals, schools, etc.) in "
-    "Vanuatu or Fiji, you MUST call get_disaster_info or get_services_info "
-    "first and answer only from what they return -- never answer these "
-    "topics from general knowledge. Emergency numbers come from "
-    "get_disaster_info, never from get_services_info or memory. If the tool says the country or topic "
-    "isn't covered, say so honestly. Do not fall back to generic or "
-    "other-country knowledge (e.g. do not describe a US, UK, or Australian "
-    "government process for a Vanuatu or Fiji question) -- wrong-country "
-    "official information is worse than admitting you don't have it.\n\n"
-    "For general knowledge questions (not disaster/government-specific), check "
-    "list_offline_encyclopedias then search the available offline reference collections "
-    "(always includes Vikidia, a children's encyclopedia; may also include MedlinePlus, "
-    "Wikipedia Vital Articles, or Gutenberg Education/Agriculture if the user has "
-    "downloaded them) before answering from your own training if you're not confident. "
-    "These are aimed at general/simplified explanations, so they may not cover advanced "
-    "or very specific topics, but prefer a verified source when one exists.\n\n"
-    "STRICTER RULE for specific factual claims -- the name of a person (founder, leader, "
-    "author, inventor), an organization, a date, a statistic, or any similar checkable "
-    "fact: NEVER state these from memory alone. Your memory of such facts is unreliable "
-    "and you cannot tell when it is wrong. Search the offline collections first; if "
-    "nothing relevant is found there, say you could not verify it offline and offer to "
-    "search the internet. Only if the user declines, or there is no internet, may you "
-    "give your best recollection -- and then you MUST open with a clear warning that it "
-    "is unverified and may be wrong, not state it as fact. When your answer does come "
-    "from a search result, briefly say so (e.g. 'according to Wikipedia'). This holds "
-    "for facts about Vanuatu and Fiji too: get_disaster_info and get_services_info hold "
-    "safety guidance and service contacts only, so a result from them that does not "
-    "contain the date, name or figure leaves it unverified -- search the offline "
-    "collections for it in that same turn (an offline encyclopedia search needs no "
-    "permission, so do not stop to ask), never fill it in from memory.\n\n"
-    "If a general knowledge question isn't answered by the offline reference collections, "
-    "tell the user honestly that you couldn't find it locally, then say you'll check the "
-    "internet, then call search_internet. Do NOT do this for disaster/government-service "
-    "questions -- get_disaster_info and get_services_info's 'say so honestly, never fall "
-    "back to generic knowledge' rule stays absolute; search_internet is only for general "
-    "knowledge topics, never as a substitute for those two tools. search_internet requires "
-    "the user's approval and will report 'no internet available' on its own if there's no "
-    "connection -- if that happens, tell the user honestly that you have no way to answer "
-    "that offline.\n\n"
-    "You can ONLY do what the available tools let you do: check disk space, "
-    "check Wi-Fi status, check internet connectivity, check printer status, "
-    "check the print queue, cancel stuck print jobs, "
-    "list open windows, check which window is active, check the current "
-    "date/time, check battery status, look up disaster safety info, look up "
-    "government/health/education services, list/search/read offline reference "
-    "collections, search the internet for general knowledge as a last resort, "
-    "list installed applications, open an installed application, close a specific "
-    "open window (by its normal close request, giving unsaved work its usual chance "
-    "to prompt -- never a forced kill), "
-    "open the Wi-Fi settings app, open the printer settings app, read a "
-    "text file or extract the text of a PDF document in the user's home directory, "
-    "create or overwrite a text file in "
-    "the user's home directory, and find files by name pattern in the user's home "
-    "directory. When troubleshooting a printer, check both get_printer_status AND "
-    "get_print_queue -- a stuck job in the queue is the most common cause of a "
-    "printer that will not print. "
-    "Use list_installed_applications first if you're not sure of an "
-    "app's exact name before calling open_application, and list_open_windows first "
-    "if you're not sure of a window's exact name before calling close_window. You "
-    "cannot run arbitrary commands, install or remove "
-    "anything, delete files, directly add or configure a printer, change network "
-    "settings, access files outside the home directory, or "
-    "change settings directly. If asked to do something outside this list, "
-    "say clearly and immediately that you can't do that and suggest what "
-    "the user could do manually -- do not call other tools first as a step "
-    "towards it, never ask clarifying questions as if you "
-    "might be able to do it, and never claim "
-    "to have done something you have no tool for."
+    "You are a helpful offline assistant. Keep answers concise, and break "
+    "anything longer than two sentences into short paragraphs -- the chat "
+    "window is narrow.\n\n"
+    "Write maths in plain text with ordinary symbols (× ÷ ≤ ≥ ≠ ± √ π, x², "
+    "a/b), never LaTeX or $...$. Put code in a fenced block naming the "
+    "language (```python) with nothing else inside the fence; use "
+    "`backticks` for an inline name.\n\n"
+    "For ANY arithmetic beyond one trivial step, call calculate and use its "
+    "result -- your own arithmetic is unreliable, and a wrong number is worse "
+    "than no answer. Show the working; let the tool compute it.\n\n"
+    "Whenever you need to check something you can check (disk, Wi-Fi, "
+    "internet, printers, windows, time, battery), call the tool in that same "
+    "turn. Never write 'let me check' and stop: call the tool, then answer "
+    "from its result.\n\n"
+    "ACTIONS (writing a file, opening an app or settings, closing a window, "
+    "cancelling print jobs): tools that change something show the user an "
+    "approval dialog by themselves, so call the tool rather than asking in "
+    "text. NEVER say you did something unless a tool result in this "
+    "conversation confirms it -- claiming a save or an opening that did not "
+    "happen is the worst thing you can do. If the user says yes to a proposal, "
+    "that is your cue to CALL THE TOOL, not to announce success. If the result "
+    "says the user declined, or reports an error, say plainly that it was NOT "
+    "done and why.\n\n"
+    "For ANY question about disaster or emergency safety (cyclone, tsunami, "
+    "earthquake, volcano), emergency phone numbers (police, fire, ambulance, "
+    "NDMO), or official government, health or education procedures "
+    "(passports, business registration, hospitals, schools) in Vanuatu or "
+    "Fiji, call get_disaster_info or get_services_info first -- emergency "
+    "numbers live in get_disaster_info -- and answer only from what they "
+    "return. If the tool says the country or topic isn't covered, say so "
+    "honestly; never substitute generic or other-country (US, UK, Australian) "
+    "information. Wrong-country official information is worse than admitting "
+    "you don't have it.\n\n"
+    "For general knowledge, search the offline reference collections "
+    "(search_offline_encyclopedia, then get_encyclopedia_article) before "
+    "answering from your own training; prefer a verified source when one "
+    "exists. STRICTER RULE for checkable facts -- a person's name, an "
+    "organisation, a date, a statistic: NEVER state these from memory alone; "
+    "you cannot tell when your memory is wrong. Search the offline collections "
+    "first, in the same turn, without asking permission. A get_disaster_info "
+    "or get_services_info result that does not contain the fact leaves it "
+    "unverified. If nothing is found offline, say you could not verify it and "
+    "offer to search the internet; only if the user declines, or there is no "
+    "internet, may you give your best recollection -- opening with a clear "
+    "warning that it is unverified and may be wrong. When an answer comes from "
+    "a search result, say so briefly (e.g. 'according to Vikidia').\n\n"
+    "search_internet is for general knowledge only, after the offline "
+    "collections had nothing -- never for disaster or government-service "
+    "questions, where 'not covered' stays the answer. It asks the user's "
+    "approval itself and reports 'no internet available' on its own; then tell "
+    "the user honestly that you cannot answer offline.\n\n"
+    "You can ONLY do what the tools let you do. You cannot run commands, "
+    "install or remove anything, delete files, add or configure a printer, "
+    "change network or other settings, or reach files outside the home "
+    "directory. If asked for anything outside the tools, say immediately that "
+    "you can't and suggest what the user could do manually -- do not call "
+    "other tools first, do not ask clarifying questions as if you might manage "
+    "it, and never claim to have done it. Printer trouble: check "
+    "get_printer_status AND get_print_queue; a stuck job is the usual cause. "
+    "Unsure of an exact name? list_installed_applications before "
+    "open_application, list_open_windows before close_window."
 )
 
 # --- Desktop tools --------------------------------------------------------
@@ -826,7 +776,16 @@ def tool_get_printer_status():
                 "Could not check printer status -- the printing service (CUPS) "
                 f"may not be running. Detail: {stderr or 'unknown error'}"
             )
-        return result.stdout.strip() or "No printers are currently configured."
+        status = result.stdout.strip()
+        if not status:
+            return "No printers are currently configured."
+        # The pointer lives in the result because the prompt's own "check
+        # both" instruction stopped working once it was shortened: the
+        # model read "paused" here, suggested the settings app, and never
+        # looked at the queue where the stuck job actually was (3/3 runs
+        # in scripts/eval-assistant.py). A reminder in the text it must
+        # read has held every time so far; one in the prompt has not.
+        return status + "\n\nNow check get_print_queue: a stuck job is the usual cause when a printer will not print."
     except Exception as exc:
         return f"Could not check printer status: {exc}"
 
@@ -1745,7 +1704,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_get_disk_usage,
         "schema": {
-            "description": "Get current disk space usage (used/free/total) for the user's home directory.",
+            "description": "Disk space used and free in the user's home directory.",
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1754,7 +1713,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_get_wifi_status,
         "schema": {
-            "description": "Check whether the computer is currently connected to a Wi-Fi network, and its signal strength.",
+            "description": 'Whether the computer is on a Wi-Fi network, and the signal strength.',
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1763,7 +1722,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_get_printer_status,
         "schema": {
-            "description": "List configured printers and whether they are ready, idle, or have an error.",
+            "description": 'Configured printers and whether each is ready, idle or in error.',
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1773,9 +1732,7 @@ TOOL_REGISTRY = [
         "handler": tool_get_print_queue,
         "schema": {
             "description": (
-                "List documents currently waiting in the print queue. Check this "
-                "when troubleshooting printing problems: a stuck job blocking the "
-                "queue is the most common reason a printer stops printing."
+                'Documents waiting in the print queue. Always check this together with get_printer_status when a printer will not print: a stuck job here is the usual cause.'
             ),
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
@@ -1787,9 +1744,7 @@ TOOL_REGISTRY = [
         "describe": lambda arguments: _("cancel all pending print jobs"),
         "schema": {
             "description": (
-                "Cancel ALL documents waiting in the print queue, on all printers. "
-                "The standard fix for a stuck queue. This also removes the user's "
-                "own queued documents, so it requires their approval."
+                'Cancel ALL waiting print jobs on all printers -- the standard fix for a stuck queue.'
             ),
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
@@ -1799,7 +1754,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_list_open_windows,
         "schema": {
-            "description": "List the names of currently open application windows on the desktop.",
+            "description": 'Names of the open application windows.',
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1808,7 +1763,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_check_internet_connectivity,
         "schema": {
-            "description": "Check whether this computer currently has a working internet connection.",
+            "description": 'Whether there is a working internet connection right now.',
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1817,7 +1772,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_get_current_datetime,
         "schema": {
-            "description": "Get the current date and time on this computer.",
+            "description": 'The current date and time.',
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1826,7 +1781,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_get_battery_status,
         "schema": {
-            "description": "Get the current battery charge percentage and charging status, if this machine has a battery.",
+            "description": 'Battery charge percentage and charging state, if there is a battery.',
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1835,7 +1790,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_get_active_window,
         "schema": {
-            "description": "Get the name of the application window the user is currently focused on/actively using.",
+            "description": 'The window the user is currently using.',
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -1844,13 +1799,13 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_calculate,
         "schema": {
-            "description": "Compute an arithmetic expression exactly and return the result. Supports + - * / // % ** parentheses, sqrt, abs, round, min, max, pi, e. Use this for ANY calculation instead of doing arithmetic yourself.",
+            "description": 'Evaluate an arithmetic expression exactly. Supports + - * / // % ** parentheses, sqrt, abs, round, min, max, pi, e. Use it for ANY calculation instead of doing arithmetic yourself.',
             "parameters": {
                 "type": "object",
                 "properties": {
                     "expression": {
                         "type": "string",
-                        "description": "The expression to evaluate, e.g. '8 * 12.50 * (1 - 0.15)'",
+                        "description": "e.g. '8 * 12.50 * (1 - 0.15)'",
                     }
                 },
                 "required": ["expression"],
@@ -1863,12 +1818,7 @@ TOOL_REGISTRY = [
         "handler": tool_get_disaster_info,
         "schema": {
             "description": (
-                "Get the official emergency phone numbers (police, fire, ambulance, maritime, "
-                "NDMO, weather/geohazard line) and cited cyclone/tsunami/earthquake safety "
-                "guidance for a Pacific country. This is authoritative, human-reviewed "
-                "content -- always prefer this over general knowledge for disaster/safety "
-                "questions about a covered country. If hazard is omitted, returns the "
-                "emergency numbers plus which hazards are available."
+                'Official emergency phone numbers (police, fire, ambulance, maritime, NDMO, weather line) and reviewed, cited cyclone/tsunami/earthquake/volcano safety guidance for a covered Pacific country. Always prefer this over general knowledge. With no hazard, returns the numbers and the hazards available.'
             ),
             "parameters": {
                 "type": "object",
@@ -1886,20 +1836,13 @@ TOOL_REGISTRY = [
                     "country": {
                         "type": "string",
                         "description": (
-                            "The country to look up. Covered: vanuatu, fiji. Any other "
-                            "country returns a not-covered message -- relay it, do not "
-                            "substitute another country's guidance."
+                            "vanuatu or fiji. Any other country gets a not-covered message -- relay it, never substitute another country's guidance."
                         ),
                     },
                     "hazard": {
                         "type": "string",
                         "description": (
-                            "Optional: cyclone, tsunami, earthquake, or volcano (Vanuatu "
-                            "only) for detailed before/during/after guidance. Name the "
-                            "hazard the user's question is about, in any language "
-                            "(Bislama saeklon = cyclone, etkwek = earthquake, volkeno = "
-                            "volcano; French séisme = earthquake, volcan = volcano). Omit "
-                            "it only when the user asks for nothing but the numbers."
+                            'Optional: cyclone, tsunami, earthquake, or volcano (Vanuatu only). Name the hazard the question is about, in any language (Bislama saeklon = cyclone, etkwek = earthquake, volkeno = volcano; French séisme, volcan). Omit only for a numbers-only question.'
                         ),
                     },
                 },
@@ -1913,15 +1856,7 @@ TOOL_REGISTRY = [
         "handler": tool_get_services_info,
         "schema": {
             "description": (
-                "Get real, official, cited government/health/education service directory "
-                "information for a Pacific country (e.g. passport applications, business "
-                "registration, hospitals, schools). This is authoritative, human-reviewed "
-                "content -- always prefer this over general knowledge for official-procedure "
-                "questions about a covered country, and never invent details from a different "
-                "country's system (e.g. do not answer with US/UK/Australian procedures for a "
-                "Pacific country question). Emergency numbers (police, fire, ambulance, NDMO) "
-                "are NOT here -- use get_disaster_info for those. If category is omitted, "
-                "returns which categories are available."
+                "Official, reviewed, cited government/health/education service directory for a covered Pacific country: passports, business registration, hospitals, schools, ministries. Always prefer this over general knowledge; never fill in another country's procedures. Emergency numbers are NOT here -- use get_disaster_info. With no category, returns the categories available."
             ),
             "parameters": {
                 "type": "object",
@@ -1929,15 +1864,13 @@ TOOL_REGISTRY = [
                     "country": {
                         "type": "string",
                         "description": (
-                            "The country to look up. Covered: vanuatu, fiji. Any other "
-                            "country returns a not-covered message -- relay it, do not "
-                            "substitute another country's procedures."
+                            "vanuatu or fiji. Any other country gets a not-covered message -- relay it, never substitute another country's procedures."
                         ),
                     },
                     "category": {
                         "type": "string",
                         "enum": ["government", "health", "education"],
-                        "description": "Optional: a specific service category for the actual contacts/details.",
+                        "description": 'Optional: government, health or education.',
                     },
                 },
                 "required": ["country"],
@@ -1950,10 +1883,7 @@ TOOL_REGISTRY = [
         "handler": tool_list_offline_encyclopedias,
         "schema": {
             "description": (
-                "List which offline reference collections are currently available (the "
-                "bundled Vikidia children's encyclopedia, plus anything the user has "
-                "downloaded via the offline content guide, e.g. MedlinePlus health info, "
-                "Wikipedia Vital Articles, Gutenberg Education/Agriculture)."
+                "Which offline reference collections are available: the bundled Vikidia children's encyclopedia, plus any the user downloaded (MedlinePlus, Wikipedia Vital Articles, Gutenberg)."
             ),
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
@@ -1964,21 +1894,18 @@ TOOL_REGISTRY = [
         "handler": tool_search_offline_encyclopedia,
         "schema": {
             "description": (
-                "Search offline reference content for articles matching a topic. Use this "
-                "for general knowledge questions the disaster/services tools don't cover. "
-                "Searches all available collections unless a specific one is named. Returns "
-                "matching article titles -- follow up with get_encyclopedia_article to read one."
+                'Search the offline reference collections for articles on a topic -- the first step for any general-knowledge or factual question. Returns titles; read one with get_encyclopedia_article.'
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "Search terms, e.g. a topic or keyword.",
+                        "description": 'Topic or keywords.',
                     },
                     "collection": {
                         "type": "string",
-                        "description": "Optional: restrict the search to one specific collection (see list_offline_encyclopedias).",
+                        "description": 'Optional: one collection name; an unknown name searches all.',
                     },
                 },
                 "required": ["query"],
@@ -1991,19 +1918,18 @@ TOOL_REGISTRY = [
         "handler": tool_get_encyclopedia_article,
         "schema": {
             "description": (
-                "Read the full text of a specific offline reference article by its exact "
-                "title and collection. Use search_offline_encyclopedia first to find both."
+                'Read an offline article by exact title and collection, both as returned by search_offline_encyclopedia.'
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "title": {
                         "type": "string",
-                        "description": "The exact article title, as returned by search_offline_encyclopedia.",
+                        "description": 'Exact title.',
                     },
                     "collection": {
                         "type": "string",
-                        "description": "The collection the article is in, as returned by search_offline_encyclopedia.",
+                        "description": 'Collection name.',
                     },
                 },
                 "required": ["title", "collection"],
@@ -2015,7 +1941,7 @@ TOOL_REGISTRY = [
         "tier": "auto",
         "handler": tool_list_installed_applications,
         "schema": {
-            "description": "List the names of applications installed on this computer that the user could open.",
+            "description": 'Names of the applications installed on this computer.',
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
@@ -2026,9 +1952,7 @@ TOOL_REGISTRY = [
         "describe": lambda arguments: _("open the Wi-Fi/network settings"),
         "schema": {
             "description": (
-                "Open the Wi-Fi/network connection settings application so the "
-                "user can connect to a network. This opens an application on "
-                "the user's desktop and requires their approval."
+                'Open the Wi-Fi/network settings app so the user can connect to a network.'
             ),
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
@@ -2040,9 +1964,7 @@ TOOL_REGISTRY = [
         "describe": lambda arguments: _("open the printer settings"),
         "schema": {
             "description": (
-                "Open the printer settings application so the user can add or "
-                "configure a printer. This opens an application on the user's "
-                "desktop and requires their approval."
+                'Open the printer settings app so the user can add or configure a printer.'
             ),
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
@@ -2054,17 +1976,14 @@ TOOL_REGISTRY = [
         "describe": _describe_open_application,
         "schema": {
             "description": (
-                "Open/launch an installed application by name (e.g. a text editor, "
-                "file manager, or office app). Use list_installed_applications first "
-                "if you're not sure of the exact name. This opens an application on "
-                "the user's desktop and requires their approval."
+                'Launch an installed application by name. Check list_installed_applications if unsure of the exact name.'
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "name": {
                         "type": "string",
-                        "description": "The application's display name, as shown by list_installed_applications.",
+                        "description": 'Display name, as listed by list_installed_applications.',
                     }
                 },
                 "required": ["name"],
@@ -2078,18 +1997,14 @@ TOOL_REGISTRY = [
         "describe": _describe_close_window,
         "schema": {
             "description": (
-                "Close a specific open window by name. Use list_open_windows first if "
-                "you're not sure of the exact name. Sends the window's normal close "
-                "request (like clicking its titlebar close button), so an application "
-                "with unsaved work gets its usual chance to prompt before closing -- "
-                "this does not force-kill anything. Requires user approval."
+                'Close an open window by name with its normal close request (unsaved work still gets its usual prompt; nothing is force-killed). Check list_open_windows if unsure of the name.'
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "name": {
                         "type": "string",
-                        "description": "The window's name/title, as shown by list_open_windows.",
+                        "description": 'Window title, as listed by list_open_windows.',
                     }
                 },
                 "required": ["name"],
@@ -2103,17 +2018,14 @@ TOOL_REGISTRY = [
         "describe": _describe_read_file,
         "schema": {
             "description": (
-                "Read the contents of a text file, or extract the text from a PDF "
-                "document, in the user's home directory. Use this to summarize or "
-                "answer questions about a document the user names. Requires user "
-                "approval since it exposes file contents to the assistant."
+                "Read a text file, or extract the text of a PDF, in the user's home directory -- to summarise or answer questions about a document the user names."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Path to the file (text or .pdf), relative to or within the home directory.",
+                        "description": 'Path relative to or within the home directory.',
                     }
                 },
                 "required": ["path"],
@@ -2127,20 +2039,18 @@ TOOL_REGISTRY = [
         "describe": _describe_write_file,
         "schema": {
             "description": (
-                "Create a new file, or overwrite an existing one, with the "
-                "given text content, inside the user's home directory. "
-                "Requires user approval since it can overwrite existing data."
+                "Create or overwrite a file in the user's home directory with the given text."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Path to the file, relative to or within the home directory.",
+                        "description": 'Path relative to or within the home directory.',
                     },
                     "content": {
                         "type": "string",
-                        "description": "The full text content to write to the file.",
+                        "description": 'The full text to write.',
                     },
                 },
                 "required": ["path", "content"],
@@ -2154,21 +2064,18 @@ TOOL_REGISTRY = [
         "describe": _describe_find_file,
         "schema": {
             "description": (
-                "Search for files by name pattern (e.g. '*.pdf', 'invoice*') within "
-                "the user's home directory, or a subfolder of it. Returns matching "
-                "file paths only, not their contents. Requires user approval since "
-                "it exposes file names/locations to the assistant."
+                "Find files by name pattern in the user's home directory or a subfolder of it. Returns paths only."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "pattern": {
                         "type": "string",
-                        "description": "Filename pattern to match, e.g. '*.pdf' or 'report*.docx'.",
+                        "description": "e.g. '*.pdf' or 'report*.docx'.",
                     },
                     "scope": {
                         "type": "string",
-                        "description": "Optional: a subfolder of the home directory to limit the search to. Defaults to the whole home directory.",
+                        "description": 'Optional subfolder of the home directory.',
                     },
                 },
                 "required": ["pattern"],
@@ -2184,18 +2091,12 @@ TOOL_REGISTRY = [
         ),
         "schema": {
             "description": (
-                "Search the internet (Wikipedia) for general knowledge, ONLY when nothing "
-                "relevant was found in the offline reference collections (list/search/read "
-                "offline reference collections). Never use this in place of get_disaster_info "
-                "or get_services_info -- if a Vanuatu/Fiji disaster or government-service topic "
-                "isn't covered locally, say so honestly instead of searching the internet for "
-                "it. Automatically reports 'no internet available' if there's no connection. "
-                "Requires user approval and uses the user's internet connection/mobile data."
+                "Search the internet (Wikipedia) for general knowledge -- ONLY after the offline collections had nothing relevant. Never for Vanuatu/Fiji disaster or government-service topics: 'not covered' is the honest answer there. Reports 'no internet available' on its own; uses the user's connection or mobile data."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "What to search for."}
+                    "query": {"type": "string", "description": 'What to search for.'}
                 },
                 "required": ["query"],
             },
@@ -2905,7 +2806,11 @@ def prewarm_prefix():
 #
 # An announced INTERNET search is left alone: search_internet is gated
 # behind an approval dialog, and "would you like me to search the
-# internet?" is the offer the prompt asks for before that dialog.
+# internet?" is the offer the prompt asks for before that dialog. Nor
+# does this cover ACTIONS (open, save, cancel, close): "would you like me
+# to open one of them?" is a real question to the user, and nudging it
+# made the model call an unrelated tool and answer nonsense (find-pdfs,
+# once the action verbs were tried). Checks only.
 _ANNOUNCED_CHECK_RE = re.compile(
     r"\b(let me|let's|i will|i'll|i am going to|i'm going to|i need to|i would need to|"
     r"would you like me to|shall i|do you want me to|i can help you|i could)\s+"

@@ -128,6 +128,18 @@ same class):
     repeats. The prompt's own fence and plain-symbol instructions stay;
     the model still ignores them for short answers.
 
+    2026-09-03, prefix trimmed 4,355 -> 3,055 tokens (system prompt 1,614
+    -> 829 with every rule kept, tool schemas 2,636 -> 2,110). Full suite
+    on the trimmed prefix: 56/58, 49s per case (was 60). One regression
+    that survived three repeats: printer stopped checking the queue once
+    the "check both" wording was shortened. Fixed where the prompt could
+    not: get_printer_status's own result now ends by pointing at
+    get_print_queue, and the case passes 5/5 since. Tried and reverted:
+    letting the nudge fire on action verbs (open/save/cancel) -- it
+    turned "would you like me to open one of them?" into a call to an
+    unrelated tool. Offers of an action are questions for the user;
+    only promised checks get nudged.
+
 Usage: start the shipped llama-server on the candidate model, then run:
 
     config/chroot/opt/venu-pacific/llama.cpp/bin/llama-server \\
@@ -253,7 +265,10 @@ CANNED_TOOLS = {
     # read-only
     "get_disk_usage": lambda: "Home directory: 12.3 GB used of 110 GB (97.7 GB free).",
     "get_wifi_status": lambda: "Connected to Wi-Fi network 'School-Office', signal strength 72%.",
-    "get_printer_status": lambda: "Printers:\n- HP-LaserJet-P1102: stopped (printer paused)",
+    "get_printer_status": lambda: (
+        "Printers:\n- HP-LaserJet-P1102: stopped (printer paused)"
+        "\n\nNow check get_print_queue: a stuck job is the usual cause when a printer will not print."
+    ),
     "get_print_queue": lambda: (
         "1 document waiting:\n- HP-LaserJet-P1102-3 'Term report.odt' (held since 08:52, "
         "printer stopped)"
