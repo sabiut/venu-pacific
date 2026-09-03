@@ -2299,7 +2299,18 @@ def _to_script(body, table, prefix):
     return "{}({})".format(prefix, body) if len(body) > 1 else prefix + body
 
 
+# Display-mode delimiters on their own line ("$$" above and below a
+# formula, or \[ and \]). _DOLLAR_PAIR cannot see these because it stops
+# at a newline, so they used to reach the screen as two bare "$$" lines
+# around an otherwise converted formula -- seen for real on the quadratic
+# formula in scripts/eval-assistant.py.
+_DISPLAY_MATH_LINE = re.compile(r"^[ \t]*(?:\$\$|\\\[|\\\])[ \t]*\n?", re.M)
+
+
 def _strip_math_delimiters(text):
+    text = _DISPLAY_MATH_LINE.sub("", text)
+    text = re.sub(r"\\\((.+?)\\\)", lambda m: m.group(1).strip(), text)
+
     def repl(match):
         inner = match.group(1)
         stripped = inner.strip()
@@ -2313,7 +2324,11 @@ def _strip_math_delimiters(text):
         if (_MATH_TELL.search(inner)
                 or (" " not in stripped and len(inner) <= 14)
                 or (len(stripped) <= 40 and not _PROSE_WORD.search(stripped))):
-            return inner
+            # The stripped form, not the raw inner text: "$ a $, $ b $" is
+            # how the model pads its delimiters, and keeping that padding
+            # detached every following comma and full stop ("a , b , and
+            # c", "= 0 .") on screen.
+            return stripped
         return match.group(0)
     return _DOLLAR_PAIR.sub(repl, text)
 
@@ -2573,21 +2588,92 @@ def _code_markup(code, language):
             return _code_span("text", code)
 
 
+# Code the model forgot to fence. The prompt says ALWAYS fence it, and for
+# a short answer the model ignores that and replies with bare source --
+# "def larger_number(a, b):" arrived as prose, the prose path turned the
+# underscore into a subscript ("largerₙumber") and the wrap collapsed the
+# indentation: broken code, in a coding answer, which is the exact failure
+# fencing exists to prevent. So a paragraph that is plainly code is treated
+# as a code block whether or not it was fenced. The test is deliberately
+# narrow: a strong opening line (def/class/import/#include/function/...),
+# or a line ending in ":" or "{" followed by an indented one, or most lines
+# ending in ";", "{" or "}". Bullet and numbered lists are excluded
+# outright, since "- Police: 917" has a colon in every line.
+_LIST_LINE = re.compile(r"^\s*(?:[-*\u2022]|\d{1,3}[.)])\s")
+_CODE_OPENING = re.compile(
+    r"^(?:def |class |async def |import |from \S+ import |#!/|#include\b|#define\b|"
+    r"function\b|const |let |var |public |private |package |using |namespace |"
+    r"<\?php|<!DOCTYPE|<html|SELECT |INSERT |UPDATE |CREATE |@\w+\(|>>> |\$ \w|"
+    r"fn |func |pub fn |print\(|console\.log\()"
+)
+_CODE_LANGUAGE_HINTS = [
+    ("python", re.compile(r"^(?:def |class |async def |import |from \S+ import |print\(|>>> )", re.M)),
+    ("javascript", re.compile(r"\b(?:function|const|let|var|console\.log)\b")),
+    ("bash", re.compile(r"^(?:#!/bin/|\$ )", re.M)),
+    ("c", re.compile(r"^#include\b", re.M)),
+    ("html", re.compile(r"^<(?:!DOCTYPE|html)", re.M)),
+    ("sql", re.compile(r"^(?:SELECT|INSERT|UPDATE|CREATE) ", re.M)),
+    ("php", re.compile(r"<\?php")),
+    ("rust", re.compile(r"^(?:pub )?fn ", re.M)),
+    ("go", re.compile(r"^(?:func |package )", re.M)),
+]
+
+
+def _looks_like_code(paragraph):
+    lines = [line for line in paragraph.splitlines() if line.strip()]
+    if not lines or any(_LIST_LINE.match(line) for line in lines):
+        return False
+    if _CODE_OPENING.match(lines[0].lstrip()):
+        return True
+    if len(lines) < 2:
+        return False
+    for first, second in zip(lines, lines[1:]):
+        if first.rstrip().endswith((":", "{")) and re.match(r"[ \t]{2,}", second):
+            return True
+    enders = sum(line.rstrip().endswith((";", "{", "}")) for line in lines)
+    return enders >= max(2, len(lines) // 2)
+
+
+def _guess_code_language(paragraph):
+    for language, pattern in _CODE_LANGUAGE_HINTS:
+        if pattern.search(paragraph):
+            return language
+    return ""
+
+
+def _lift_unfenced_code(prose):
+    """Split a prose block on blank lines and return blocks, with any
+    code-looking paragraph promoted to ('code', language, source)."""
+    blocks, run = [], []
+    for paragraph in re.split(r"\n[ \t]*\n", prose):
+        if _looks_like_code(paragraph):
+            if run:
+                blocks.append(("prose", "\n\n".join(run)))
+                run = []
+            blocks.append(("code", _guess_code_language(paragraph), paragraph.strip("\n")))
+        else:
+            run.append(paragraph)
+    if run:
+        blocks.append(("prose", "\n\n".join(run)))
+    return blocks
+
+
 def _split_message_blocks(text):
     """Split a reply into ('prose', text) and ('code', language, source).
 
     Code is lifted out BEFORE any math prettifying runs, so a backslash in a
     code sample is never mistaken for LaTeX -- which would corrupt the very
-    answer the user asked for.
+    answer the user asked for. Fenced code first; then any paragraph that
+    is plainly code despite having no fence (see _looks_like_code).
     """
     blocks, pos = [], 0
     for match in _CODE_FENCE.finditer(text):
         if match.start() > pos:
-            blocks.append(("prose", text[pos:match.start()]))
+            blocks.extend(_lift_unfenced_code(text[pos:match.start()]))
         blocks.append(("code", match.group(1).lower(), match.group(2).rstrip("\n")))
         pos = match.end()
     if pos < len(text):
-        blocks.append(("prose", text[pos:]))
+        blocks.extend(_lift_unfenced_code(text[pos:]))
     return [b for b in blocks if b[0] == "code" or b[1].strip()]
 
 
