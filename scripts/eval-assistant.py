@@ -109,6 +109,15 @@ same class):
     the prompt clause against calling tools before a refusal did not
     stop it. Prefix 4,359 tokens.
 
+    Full suite after all of the above, same model and flags as the first
+    baseline: 52/56. Fixed since 44/51: fj-police-number, vu-ndmo-number,
+    fact-pam-year, open-declined, write-declined, enc-photosynthesis (the
+    last by luck; the prompt still permits answering from training). The
+    five cases added on the way all pass. Still failing: code-fence and
+    quadratic (untouched), fact-fiji-population (honest, but promised a
+    further search after spending its rounds on three identical ones),
+    delete-downloads (the regression above). Rounds per case 2.0 -> 2.3.
+
 Usage: start the shipped llama-server on the candidate model, then run:
 
     config/chroot/opt/venu-pacific/llama.cpp/bin/llama-server \\
