@@ -2865,7 +2865,7 @@ _ANNOUNCED_CHECK_RE = re.compile(
     r"\b(let me|let's|i will|i'll|i am going to|i'm going to|i need to|i would need to|"
     r"would you like me to|shall i|do you want me to|i can help you|i could)\s+"
     r"(?:now\s+|also\s+|first\s+|then\s+|go ahead and\s+)?(?:try\s+(?:to\s+)?)?"
-    r"(search|check|look|find|verify|consult|query)(?:ing)?\b"
+    r"(search|check|look|find|verify|consult|query|calculate|compute)(?:ing)?\b"
     # ...or hands the user the job of using a tool only the model has:
     # "you may want to consult an offline reference collection".
     r"|\b(consult|check|search|look in)\s+(an|the|our|your)\s+offline\s+(reference\s+)?collection",
@@ -2915,6 +2915,30 @@ def _bare_tool_call(content, known_tools):
     }
 
 
+# A year in the reply that came from nowhere. "When did Vanuatu become
+# independent?" was answered "September 30, 1980" and, on another run,
+# "December 15, 1980" -- flat, confident, both wrong (it was 30 July) --
+# after a services lookup whose result said in as many words that it
+# holds no dates. The footer held for the disaster tool and not for this
+# one, and there is no third sentence to write. This check is mechanical:
+# a four-digit year in the reply that appears in no tool result this
+# turn, no earlier message, and not the user's own words is unverified by
+# construction, and the reply goes back once with the instruction to
+# search or say so.
+_YEAR_RE = re.compile(r"\b(1[5-9]\d\d|20\d\d)\b")
+UNGROUNDED_YEAR_NUDGE = (
+    "The year in your reply does not come from any tool result, so it is "
+    "unverified. Search the offline collections for it now with "
+    "search_offline_encyclopedia. If they have nothing, say plainly that you could "
+    "not verify it offline and offer search_internet -- do not state it as fact."
+)
+
+
+def _ungrounded_years(reply, grounded_text):
+    known = set(_YEAR_RE.findall(grounded_text))
+    return sorted(set(_YEAR_RE.findall(reply or "")) - known)
+
+
 def _announces_without_acting(text):
     for match in _ANNOUNCED_CHECK_RE.finditer(text or ""):
         start = max(text.rfind(".", 0, match.start()), text.rfind("\n", 0, match.start())) + 1
@@ -2957,6 +2981,11 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
     # attempting a tool call that would just be dropped on the floor.
     MAX_TOOL_ROUNDS = 4
     nudges_left = 1
+    year_nudges_left = 1
+    # Everything a year in the reply could legitimately have come from.
+    grounded = [user_text] + [
+        str(m.get("content") or "") for m in history if isinstance(m, dict)
+    ]
     # search_internet is described as a last resort after the offline
     # collections, and the model skips straight to it anyway for anything
     # that sounds like a statistic ("population of Fiji", 3 runs out of 3).
@@ -3019,6 +3048,16 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
                 nudges_left -= 1
                 messages.append(message)
                 messages.append({"role": "user", "content": NARRATION_NUDGE})
+                continue
+            if (
+                round_index + 1 < MAX_TOOL_ROUNDS
+                and year_nudges_left
+                and _ungrounded_years(content, "\n".join(grounded))
+            ):
+                # See _YEAR_RE above.
+                year_nudges_left -= 1
+                messages.append(message)
+                messages.append({"role": "user", "content": UNGROUNDED_YEAR_NUDGE})
                 continue
             # Returned VERBATIM. Prettifying here mangled code: the reply is
             # one string at this point, so \u005f\u0069 inside an identifier like
@@ -3090,6 +3129,7 @@ def query_assistant(user_text, history, request_approval, on_partial_reply=None)
                     result = "The user did not approve this action."
             else:
                 result = f"Unknown tool: {name}"
+            grounded.append(str(result))
             messages.append({"role": "tool", "tool_call_id": call_id, "content": result})
 
     return _("Sorry, I couldn't finish that after checking a few things.")

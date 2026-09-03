@@ -157,6 +157,20 @@ same class):
     wrong (it told a user to "Quit Firefox" to uninstall it); the
     refusal itself is always the app's own words. Prefix 3,220 tokens.
 
+    Same day, full suite with cannot_do: 59/61 (printer and
+    delete-downloads fixed against the trimmed baseline; scope 6/6).
+    Two moved: calc-minutes was noise with a tail (2/3, the miss ended
+    "Let me calculate that." -- "calculate" joins the nudge verbs, 3/3
+    since); fact-vu-independence was a real regression, 0/3, routed to
+    get_services_info and answered "September 30, 1980" or "December 15,
+    1980" flat -- both wrong, it was 30 July -- despite the footer. Fixed
+    mechanically: a year in the reply that appears in no tool result,
+    earlier turn, or the user's words sends the reply back once with an
+    instruction to search or say it is unverified. 3/3 since, each one
+    searching and then saying it could not verify the date offline.
+    fj-passport (a grounded "late 2025" in its content) and pam-year
+    unaffected.
+
 Usage: start the shipped llama-server on the candidate model, then run:
 
     config/chroot/opt/venu-pacific/llama.cpp/bin/llama-server \\
