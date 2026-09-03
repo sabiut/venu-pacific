@@ -1316,10 +1316,22 @@ def tool_search_offline_encyclopedia(query, collection=None):
     )
 
 
+# search_offline_encyclopedia lists hits as "- Title (in collection)", and
+# the model copies the whole line back as the title -- "Photosynthesis (in
+# vikidia)" -- then gets "no article with that exact title" and gives up.
+# Seen in a full evaluation run. The suffix is ours, so strip it here.
+_IN_COLLECTION_SUFFIX = re.compile(r"\s*\(in [^()]*\)\s*$")
+
+
 def tool_get_encyclopedia_article(title, collection):
+    title = _IN_COLLECTION_SUFFIX.sub("", title or "").strip()
     zims = _discover_zim_files()
-    if collection not in zims:
-        return f"No collection named '{collection}'. Available: " + ", ".join(sorted(zims.keys()))
+    # Same case-insensitive courtesy as the search: the model writes
+    # 'Vikidia' for 'vikidia' and should not lose a round over it.
+    wanted = (collection or "").strip().lower()
+    collection = next((name for name in zims if name.lower() == wanted), None)
+    if collection is None:
+        return f"No collection named '{wanted}'. Available: " + ", ".join(sorted(zims.keys()))
     zim_path = zims[collection]
     try:
         result = subprocess.run(

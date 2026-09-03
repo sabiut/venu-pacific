@@ -171,6 +171,18 @@ same class):
     fj-passport (a grounded "late 2025" in its content) and pam-year
     unaffected.
 
+    Full suite with everything above: 60/61 (calc-minutes and
+    fact-vu-independence fixed against the previous run; no regressions
+    among the cases that were passing). The one miss was mechanical:
+    search results read "- Photosynthesis (in vikidia)", the model
+    copied the whole line as the title, and the article lookup failed
+    on the suffix. get_encyclopedia_article now strips it and matches
+    the collection case-insensitively; enc-photosynthesis 3/3 and
+    enc-coral pass since. Branch total against the first baseline of
+    44/51: every category clean except the model's own suggested
+    alternatives inside a refusal, which the harness does not judge.
+    Prefix 3,220 tokens, down from 4,095 at the start of the branch.
+
 Usage: start the shipped llama-server on the candidate model, then run:
 
     config/chroot/opt/venu-pacific/llama.cpp/bin/llama-server \\
@@ -262,6 +274,7 @@ def fake_search_offline_encyclopedia(query, collection=None):
 
 
 def fake_get_encyclopedia_article(title, collection):
+    title = re.sub(r"\s*\(in [^()]*\)\s*$", "", title or "").strip()   # mirrors the real tool
     if (collection or "").strip().lower() != FAKE_COLLECTION:
         return f"No collection named '{collection}'. Available: {FAKE_COLLECTION}"
     text = FAKE_ARTICLES.get(title) or next(
