@@ -1,7 +1,7 @@
 # Download & verify
 
-!!! success "Venu Pacific 26.08.15 — the first public release"
-    Venu Pacific 26.08.15 is ready to download. See the
+!!! success "Venu Pacific 26.08.16 — the first public release"
+    Venu Pacific 26.08.16 is ready to download. See the
     [release notes](https://github.com/sabiut/venu-pacific/releases/tag/v26.08.13)
     for what's included and hardware requirements.
 
@@ -11,8 +11,8 @@ Two files:
 
 | File | What it is |
 |---|---|
-| [`venu-pacific-26.08.15-amd64.iso`](https://download.venupacific.org/venu-pacific-26.08.15-amd64.iso) | The system image (~4.7 GB) |
-| [`venu-pacific-26.08.15-amd64.iso.sha256`](https://download.venupacific.org/venu-pacific-26.08.15-amd64.iso.sha256) | Its checksum, for verifying the download |
+| [`venu-pacific-26.08.16-amd64.iso`](https://download.venupacific.org/venu-pacific-26.08.16-amd64.iso) | The system image (~4.7 GB) |
+| [`venu-pacific-26.08.16-amd64.iso.sha256`](https://download.venupacific.org/venu-pacific-26.08.16-amd64.iso.sha256) | Its checksum, for verifying the download |
 
 A 4.7 GB download is heavy on Pacific connections — that's deliberate:
 everything (including the AI model and the offline encyclopedias) is inside,
@@ -28,13 +28,13 @@ A partially-downloaded or corrupted ISO produces confusing installation
 failures, so always verify before writing the USB stick. On Linux or macOS:
 
 ```bash
-sha256sum -c venu-pacific-26.08.15-amd64.iso.sha256
+sha256sum -c venu-pacific-26.08.16-amd64.iso.sha256
 ```
 
 On Windows (PowerShell):
 
 ```powershell
-Get-FileHash venu-pacific-26.08.15-amd64.iso -Algorithm SHA256
+Get-FileHash venu-pacific-26.08.16-amd64.iso -Algorithm SHA256
 ```
 
 then compare the printed hash with the contents of the `.sha256` file. It

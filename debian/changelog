@@ -1,3 +1,47 @@
+venu-pacific (26.08.16) trixie; urgency=medium
+
+  * venu-pacific-assistant: the assistant now has a regression suite,
+    scripts/eval-assistant.py, that scores its behaviour against 61 fixed
+    questions using the app's own prompt, tools, round loop and renderer.
+    Every change below was made because the suite caught the failure and
+    kept because the suite showed the fix holding across repeats. First
+    baseline 44/51; this release 60/61.
+  * Emergency-number questions ("what's the police number in Fiji") went
+    to the services directory, which has none, and the model invented a
+    number. They now route to the disaster tool, whose descriptions lead
+    with the numbers it holds, and every services result points there.
+  * The lookup tools no longer restrict country and hazard to an enum.
+    The enum forced a Samoa question to be asked as Fiji, and the model
+    then relabelled Fiji's earthquake steps as "general advice" for
+    Samoa; it also hid Vanuatu's reviewed volcano and ashfall guidance.
+    An uncovered country now gets the tool's honest not-covered message.
+  * Dates, names and figures are no longer stated from memory after a
+    lookup that could not have supplied them. Layered fixes, each one
+    measured as necessary: both lookup results say they hold no dates or
+    statistics; a reply that promises a check without making one is sent
+    back once to make it; an internet search is refused until an offline
+    one has happened; and a year that appears in no tool result, earlier
+    turn or the user's words sends the reply back to search or say it is
+    unverified. The independence date had come out as two different wrong
+    days, flat, on consecutive runs.
+  * Bare code without a fence is rendered as code (it used to reach the
+    screen as prose with underscores turned into subscripts), and the
+    model's display-mode maths delimiters and delimiter padding no longer
+    leak ("a , b , and c").
+  * The fixed prompt-and-tools prefix is trimmed from 4,095 to 3,220
+    tokens with every rule kept: about 40 seconds less prompt processing
+    at login on the pilot hardware, and a smaller cache on every turn.
+  * Out-of-scope requests ("delete everything in Downloads") are refused
+    through a cannot_do tool instead of a sentence. The model used to run
+    a file search first, which meant an approval dialog for nothing. A
+    tool call the model writes as plain text is now dispatched as the
+    call it meant; it had done that 18 runs out of 18.
+  * The printer-status result points at the print queue, where the stuck
+    job usually is; encyclopedia lookups accept the collection name in
+    any case and the "(in collection)" suffix the search itself printed.
+
+ -- sum abiut <suabiut@gmail.com>  Fri, 04 Sep 2026 11:21:36 +1100
+
 venu-pacific (26.08.15) trixie; urgency=medium
 
   * venu-pacific-assistant: remove the translate-to-Bislama/Fijian buttons
